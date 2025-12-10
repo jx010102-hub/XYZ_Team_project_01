@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:xyz_project_01/customer/c_regist.dart';
 
 class CLogin extends StatefulWidget {
   const CLogin({super.key});
@@ -69,7 +71,7 @@ class _CLoginState extends State<CLogin> {
                   children: [
                     TextButton(
                       onPressed: (){
-                        //
+                        Get.to(CRegist());
                       },
                       child: Text('회원가입')
                     ),
