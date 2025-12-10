@@ -35,6 +35,33 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
 
+  # 위치 정보
+  geocoding: ^4.0.0
+
+  # GPS 신호
+  geolocator: ^14.0.2
+
+  # 지도
+  flutter_map: ^8.2.2
+
+  # 지도를 현위치로 옮기기
+  latlong2: ^0.9.1
+
+  # GetX
+  get: ^4.7.3
+
+  # SQLite
+  sqflite: ^2.4.2
+
+  # Path
+  path: ^1.9.1
+
+  # Image Picker
+  image_picker: ^1.2.1
+
+  # Charts
+  syncfusion_flutter_charts: ^31.2.18
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
