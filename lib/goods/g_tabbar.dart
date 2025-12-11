@@ -6,7 +6,8 @@ import 'package:xyz_project_01/goods/g_map.dart'; // 지도 (중앙 버튼 액�
 import 'package:xyz_project_01/goods/g_profill.dart'; // 프로필
 
 class GTabbar extends StatefulWidget {
-  const GTabbar({super.key});
+  final String userid;
+  const GTabbar({super.key, required this.userid});
 
   @override
   State<GTabbar> createState() => _GTabbarState();

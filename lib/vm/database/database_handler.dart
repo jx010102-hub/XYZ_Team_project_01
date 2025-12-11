@@ -105,7 +105,7 @@ class DatabaseHandler {
         );
         await db.execute(
           """
-          create table order(
+          create table orders(
             oseq integer primary key autoincrement,
             ostatus integer,
             odate text,

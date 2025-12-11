@@ -4,6 +4,8 @@ import 'package:xyz_project_01/customer/c_find_id.dart';
 import 'package:xyz_project_01/customer/c_find_pw.dart';
 import 'package:xyz_project_01/customer/c_regist.dart';
 import 'package:xyz_project_01/goods/g_tabbar.dart';
+import 'package:xyz_project_01/util/message.dart';
+import 'package:xyz_project_01/vm/database/customer_database.dart';
 
 class CLogin extends StatefulWidget {
   const CLogin({super.key});
@@ -16,12 +18,18 @@ class _CLoginState extends State<CLogin> {
   // Property
   late TextEditingController idController;
   late TextEditingController pwController;
+  late CustomerDatabase customer;
+  late bool i; // 로그인 체크
+
+  Message message = Message();
 
   @override
   void initState() {
     super.initState();
     idController = TextEditingController();
     pwController = TextEditingController();
+    customer = CustomerDatabase();
+    i = false;
   }
 
 
@@ -57,7 +65,7 @@ class _CLoginState extends State<CLogin> {
                 padding: const EdgeInsets.fromLTRB(0, 30, 0, 30),
                 child: ElevatedButton(
                   onPressed: (){
-                    Get.to(GTabbar());
+                    checkLogin();
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.black,
@@ -112,5 +120,45 @@ class _CLoginState extends State<CLogin> {
         ),
       ),
     );
+  } // build
+
+  void checkLogin() async{
+    // id, pw가 비어있을 경우
+    if(idController.text.trim().isEmpty ||
+       pwController.text.trim().isEmpty){
+      i=true;
+      message.snackBar('오류', '아이디 또는 비밀번호가 틀렸습니다.');
+    }else{
+    // 정상적인 경우
+    final id = idController.text.trim();
+    final pw = pwController.text.trim();
+    final result = await customer.loginCheck(id, pw);
+      if(result){
+        Get.defaultDialog(
+          title: '로그인',
+          middleText: '로그인 되었습니다.',
+          backgroundColor: const Color.fromARGB(255, 193, 197, 201),
+          barrierDismissible: false,
+          actions: [
+            TextButton(
+              onPressed: () {
+                Get.offAll(GTabbar(userid: id));
+              },
+              style: TextButton.styleFrom(
+                  foregroundColor: Colors.black,
+              ),
+              child: Text('OK'),
+            ),
+          ],
+        );
+      }else{
+    // id, pw가 틀렸을 경우
+        i=false;
+        message.snackBar('오류', '아이디 또는 비밀번호가 틀렸습니다.');
+      }
+    }
+    setState(() {});
   }
-}
+
+
+} // class

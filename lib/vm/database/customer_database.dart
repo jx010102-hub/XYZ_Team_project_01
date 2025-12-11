@@ -14,6 +14,33 @@ class CustomerDatabase {
     return queryResults.map((e) => Customer.fromMap(e)).toList();
   }
 
+  // 이메일 중복 체크
+  Future<int> idCheck(String id) async {
+    final db = await handler.initializeDB();
+    var result = await db.rawQuery(
+      """
+      select count(*) as count
+      from customer
+      where cemail = ?
+      """,
+      [id],
+    );
+    return Sqflite.firstIntValue(result) ?? 0;
+  }
+
+  // 로그인
+  Future<bool> loginCheck(String id, String pw) async {
+    final Database db = await handler.initializeDB();
+    final List<Map<String, dynamic>> result = await db.rawQuery(
+      """
+      select * from customer
+      where cemail = ? and cpw = ?
+      """,
+      [id, pw]
+    );
+    return result.isNotEmpty;
+  }
+
   // 입력
   Future<int> insertCustomer(Customer customer) async{
     int result = 0;
