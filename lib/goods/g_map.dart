@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart'; 
 import 'package:latlong2/latlong.dart'; 
 
+// 대리점 (Branch) 모델 클래스
 class Branch {      
   int bid;          
   double blat;      
@@ -39,6 +40,9 @@ class _GMapState extends State<GMap> {
   final MapController _mapController = MapController();
   int _currentTab = 0; 
   
+  // 드롭다운 선택 상태
+  String? _selectedDistrict; // 현재 선택된 구
+
   // [4] 매장 목록 (위도/경도 포함) - 전체 데이터
   final List<Map<String, dynamic>> allStores = [
     // 상세 주소는 데이터에서만 유지하고, 화면에는 구 이름만 표시합니다.
@@ -75,7 +79,7 @@ class _GMapState extends State<GMap> {
     {'name': '중랑 상봉점(XYZ 슈퍼)', 'address': '서울특별시 중랑구 망우로 307', 'district': '중랑구', 'image': 'images/xyz_logo.png', 'lat': 37.5975, 'lng': 127.0950},
   ];
 
-  // [5] 기타 데이터 (변화 없음)
+  // [5] 기타 데이터
   final List<String> seoulDistricts = [
     '강남구', '강동구', '강북구', '강서구', '관악구', '광진구', '구로구', 
     '금천구', '노원구', '도봉구', '동대문구', '동작구', '마포구', '서대문구', 
@@ -191,7 +195,7 @@ class _GMapState extends State<GMap> {
             Expanded(
               child: _currentTab == 0
                   ? _buildListView() 
-                  : _buildMapView(), 
+                  : _buildMapView(), // **4-B. 지도 탭 기능**
             ),
           ],
         ),
@@ -200,7 +204,27 @@ class _GMapState extends State<GMap> {
   }
 
   // --- 1. 헤더 (변화 없음) ---
-  Widget _buildHeader() { /* ... */ return Container(); }
+  Widget _buildHeader() {
+     return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Column(
+        children: [
+          Container(
+            width: 40, height: 4,
+            decoration: BoxDecoration(
+              color: Colors.grey[300],
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(height: 10),
+          const Text(
+            '매장선택',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
+    );
+  }
   
   // 2. 검색창 (변화 없음)
   Widget _buildSearchBar() {
@@ -215,7 +239,7 @@ class _GMapState extends State<GMap> {
         child: TextField(
           controller: _searchController, 
           decoration: const InputDecoration(
-            hintText: '구 이름 (예: 강남구)',
+            hintText: '매장을 검색해보세요 (예: 강남구)',
             border: InputBorder.none,
             icon: Icon(Icons.search, color: Colors.grey),
           ),
@@ -226,25 +250,78 @@ class _GMapState extends State<GMap> {
   }
 
   // 3. 목록/지도 탭 버튼 (변화 없음)
-  Widget _buildTabBar() { /* ... */ return Container(); }
+  Widget _buildTabBar() {
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: [
+            GestureDetector(
+              onTap: () => setState(() => _currentTab = 0),
+              child: Container(
+                padding: const EdgeInsets.only(top: 10, bottom: 8, left: 20, right: 30),
+                child: Text(
+                  '목록',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: _currentTab == 0 ? FontWeight.bold : FontWeight.normal,
+                    color: _currentTab == 0 ? Colors.black : Colors.grey[600],
+                  ),
+                ),
+              ),
+            ),
+            GestureDetector(
+              onTap: () => setState(() => _currentTab = 1),
+              child: Container(
+                padding: const EdgeInsets.only(top: 10, bottom: 8, right: 20),
+                child: Text(
+                  '지도',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: _currentTab == 1 ? FontWeight.bold : FontWeight.normal,
+                    color: _currentTab == 1 ? Colors.black : Colors.grey[600],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        Stack(
+          children: [
+            Container(height: 1, color: Colors.grey[300]),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              margin: EdgeInsets.only(left: _currentTab == 0 ? 20 : 80), 
+              width: 40, height: 2,
+              color: Colors.black,
+            ),
+          ],
+        ),
+      ],
+    );
+  }
 
-  // 4-A. 목록 탭 내용 (정렬 및 주소 간소화 적용)
+  // 4-A. 목록 탭 내용 (드롭다운 적용)
   Widget _buildListView() {
-    // 1. 필터링 로직: 현재 검색어에 따라 매장 필터링
+    // 1. 필터링 로직: 검색어 또는 드롭다운 선택된 구에 따라 필터링
     final filteredStores = allStores.where((store) {
-      if (_currentSearchQuery.isEmpty) return true;
-
       final district = (store['district'] as String).toLowerCase();
       final name = (store['name'] as String).toLowerCase();
+      
+      // 드롭다운 필터링
+      bool dropdownMatch = _selectedDistrict == null || _selectedDistrict == '전체' || district.contains(_selectedDistrict!.toLowerCase());
 
-      return district.contains(_currentSearchQuery) || name.contains(_currentSearchQuery);
+      // 검색창 필터링
+      bool searchMatch = _currentSearchQuery.isEmpty || district.contains(_currentSearchQuery) || name.contains(_currentSearchQuery);
+
+      return dropdownMatch && searchMatch;
     }).toList();
 
-    // 2. **거리순 정렬 로직 적용**
+    // 2. 거리순 정렬
     filteredStores.sort((a, b) {
       final distA = _calculateDistanceInMeters(a['lat'], a['lng']);
       final distB = _calculateDistanceInMeters(b['lat'], b['lng']);
-      return distA.compareTo(distB); // 가까운 거리(작은 값)가 먼저 오도록 정렬
+      return distA.compareTo(distB); 
     });
 
 
@@ -254,10 +331,18 @@ class _GMapState extends State<GMap> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            const Text(
+              '지역 선택',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 10),
+            
+            _buildDistrictDropdown(), // **새로운 드롭다운 위젯**
+            
+            const SizedBox(height: 20),
+
             Text(
-              _currentSearchQuery.isEmpty 
-              ? '가까운 매장 (거리순 정렬 / 기준: 강남역)' // 정렬 정보 추가
-              : '검색 결과 (${filteredStores.length}개)',
+              '가까운 매장 (거리순 정렬 / 기준: 강남역)',
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 15),
@@ -270,34 +355,57 @@ class _GMapState extends State<GMap> {
               return _buildStoreCard(
                 store: store, 
                 name: store['name'] as String,
-                address: store['district'] as String, // **간소화된 주소 (구 이름)**
+                address: store['district'] as String, // 간소화된 주소 (구 이름)
                 distance: formattedDistance, 
                 imagePath: store['image'] as String,
               );
             }).toList(),
-            
-            // 검색 중이 아닐 때만 서울 전 지역 구 목록 표시
-            if (_currentSearchQuery.isEmpty) ...[
-              const SizedBox(height: 30),
-              const Text('서울 전 지역', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 10),
-              
-              Wrap(
-                spacing: 8.0, runSpacing: 8.0,
-                children: seoulDistricts.map((district) => _buildDistrictButton(district)).toList(),
-              ),
-            ],
           ],
         ),
       ),
     );
   }
 
-  // 매장 항목 카드 위젯 (주소 표시 변경)
+  // **새로운 드롭다운 위젯**
+  Widget _buildDistrictDropdown() {
+    List<String> items = ['전체', ...seoulDistricts];
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: _selectedDistrict ?? '전체', // 선택된 값이 없으면 '전체'를 기본값으로
+          isExpanded: true,
+          icon: const Icon(Icons.arrow_drop_down),
+          style: const TextStyle(color: Colors.black, fontSize: 16),
+          onChanged: (String? newValue) {
+            setState(() {
+              _selectedDistrict = newValue;
+              // 드롭다운으로 선택했으므로 검색창 초기화
+              _searchController.clear();
+              _currentSearchQuery = '';
+            });
+          },
+          items: items.map<DropdownMenuItem<String>>((String value) {
+            return DropdownMenuItem<String>(
+              value: value,
+              child: Text(value),
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+
+  // 매장 항목 카드 위젯 (변화 없음)
   Widget _buildStoreCard({
     required Map<String, dynamic> store, 
     required String name,
-    required String address, // 이제 구 이름만 받습니다
+    required String address, 
     required String distance,
     required String imagePath,
   }) {
@@ -311,7 +419,7 @@ class _GMapState extends State<GMap> {
           subtitle: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(address, style: const TextStyle(color: Colors.grey)), // 구 이름 표시
+              Text(address, style: const TextStyle(color: Colors.grey)), 
               const SizedBox(height: 5),
               Text(distance, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
             ],
@@ -325,22 +433,46 @@ class _GMapState extends State<GMap> {
     );
   }
   
-  // 구 이름 버튼 위젯 (변화 없음)
-  Widget _buildDistrictButton(String district) {
-    return OutlinedButton(
-      onPressed: () { 
-        _searchController.text = district;
-        _onSearchChanged();
-      },
-      style: OutlinedButton.styleFrom(
-        foregroundColor: Colors.black, side: BorderSide(color: Colors.grey.shade300),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+  // 4-B. 지도 탭 내용 (MapController 및 마커 기능 유지)
+  Widget _buildMapView() {
+    // 25개 구청 위치를 마커 리스트로 변환
+    List<Marker> markers = seoulDistrictCenters.entries.map((entry) {
+      return Marker(
+        point: entry.value, 
+        width: 100, height: 50,
+        child: Column(
+          children: [
+            // 마커 텍스트 (구 이름)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+              decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(4)),
+              child: Text(entry.key, style: const TextStyle(color: Colors.white, fontSize: 10)),
+            ),
+            // 마커 아이콘
+            const Icon(Icons.location_on, color: Colors.red, size: 25),
+          ],
+        ),
+      );
+    }).toList();
+
+    return FlutterMap(
+      mapController: _mapController, // 지도 컨트롤러 연결
+      options: const MapOptions(
+        initialCenter: LatLng(37.5665, 126.9780), 
+        initialZoom: 10.5, 
+        interactionOptions: InteractionOptions(
+          flags: InteractiveFlag.all & ~InteractiveFlag.rotate, 
+        ),
       ),
-      child: Text(district, style: const TextStyle(fontSize: 14)),
+      children: [
+        // 1. 타일 레이어 (지도 이미지)
+        TileLayer(
+          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+          userAgentPackageName: 'com.example.xyz_project_01',
+        ),
+        // 2. 마커 레이어 (구청 위치 표시)
+        MarkerLayer(markers: markers),
+      ],
     );
   }
-
-  // 4-B. 지도 탭 내용 (변화 없음)
-  Widget _buildMapView() { /* ... */ return Container(); }
 }
