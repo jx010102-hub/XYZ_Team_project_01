@@ -137,6 +137,45 @@ class _GMainState extends State<GMain> {
               ),
             ),
           ),
+
+          // _GMainState 클래스 내부의 build 메서드 > body: Column의 children[] 목록에 추가
+          const SizedBox(height: 30), // 슬라이더와 인기상품 사이 간격
+          // 4. 섹션 타이틀 ('인기 상품')
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20.0),
+            child: Text(
+              "인기 상품 🏆",
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          const SizedBox(height: 15),
+
+          // 5. 인기 상품 가로 스크롤 섹션
+          SizedBox(
+            height:
+                220, // 전체 가로 스크롤 섹션의 높이 지정 (카드 높이 + 텍스트 높이)
+            child: ListView.builder(
+              scrollDirection:
+                  Axis.horizontal, // 핵심: 가로 스크롤 설정
+              padding: const EdgeInsets.symmetric(
+                horizontal: 20,
+              ), // 좌우 패딩
+              itemCount: 5, // 임시로 5개 아이템을 보여주도록 설정
+              itemBuilder: (context, index) {
+                // TODO: 실제 데이터 리스트를 사용하도록 변경해야 합니다.
+                // 현재는 임시 데이터로 "Skechers Go Run" 정보를 사용합니다.
+                return _buildPopularItemCard(
+                  'images/popular_shoe_${index + 1}.png', // 임시 이미지 경로
+                  '스케쳐스',
+                  '고 런 엘리베이트',
+                  '119,000원',
+                );
+              },
+            ),
+          ),
         ],
       ),
     );
@@ -227,6 +266,81 @@ class _GMainState extends State<GMain> {
   }
 
   // _GMainState 클래스 내부
+  Widget _buildPopularItemCard(
+    String imagePath,
+    String brand,
+    String name,
+    String price,
+  ) {
+    // 요청하신 '위쪽 슬라이드 사진 보다 반 정도의 크기'를 반영하여 높이를 120으로 설정
+    const double cardWidth = 150; // 카드의 너비
+    const double imageBoxHeight = 120; // 이미지 영역의 높이
+
+    return Container(
+      width: cardWidth,
+      margin: const EdgeInsets.only(right: 15), // 카드 간 간격
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 1. 이미지 박스 (슬라이드 박스 높이 320의 반 정도인 120으로 설정)
+          Container(
+            height: imageBoxHeight,
+            width: cardWidth,
+            decoration: BoxDecoration(
+              color: Colors.grey[200], // 배경색을 살짝 넣어줍니다.
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: Image.asset(
+                imagePath,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return const Center(
+                    child: Icon(
+                      Icons.shopping_bag,
+                      color: Colors.grey,
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          // 2. 텍스트 정보
+          Text(
+            brand, // '스케쳐스'
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: Colors.black,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            name, // '고 런 엘리베이트'
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey[600],
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 5),
+          Text(
+            price, // '119,000원'
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: Colors.blueAccent,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // _GMainState 클래스 내부
   // 페이지 인디케이터 동그라미 위젯
   Widget _buildIndicator(bool isActive) {
     return AnimatedContainer(
@@ -243,7 +357,7 @@ class _GMainState extends State<GMain> {
     );
   }
 
-  //-------
+  //-------function
 
   // 다음 페이지로 이동하는 함수
   void _nextPage() {
