@@ -39,70 +39,75 @@ class _CRegistState extends State<CRegist> {
                 padding: const EdgeInsets.all(20.0),
                 child: Image.asset('images/logo.png'),
               ),
-              Text(
-                '회원가입',
-                style: TextStyle(
-                  fontSize: 25
+              Text('회원가입', style: TextStyle(fontSize: 25)),
+              TextField(
+                controller: idController,
+                decoration: InputDecoration(
+                  labelText: '이메일 주소',
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  0,
+                  30,
+                  0,
+                  30,
+                ),
+                child: ElevatedButton(
+                  onPressed: () {
+                    //
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.black,
+                    foregroundColor: Colors.white,
+                    minimumSize: Size(350, 50),
+                  ),
+                  child: Text('중복확인'),
                 ),
               ),
               TextField(
-                  controller: idController,
-                  decoration: InputDecoration(
-                    labelText: '이메일 주소'
-                  ),
+                controller: pwController,
+                decoration: InputDecoration(
+                  labelText: '비밀번호',
                 ),
+              ),
+              TextField(
+                controller: nameController,
+                decoration: InputDecoration(
+                  labelText: '이름',
+                ),
+              ),
+              TextField(
+                controller: phoneController,
+                decoration: InputDecoration(
+                  labelText: '전화번호',
+                ),
+              ),
+              TextField(
+                controller: addressController,
+                decoration: InputDecoration(
+                  labelText: '주소',
+                ),
+              ),
               Padding(
-                  padding: const EdgeInsets.fromLTRB(0, 30, 0, 30),
-                  child: ElevatedButton(
-                    onPressed: (){
-                      //
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.black,
-                      foregroundColor: Colors.white,
-                      minimumSize: Size(350, 50)
-                    ),
-                    child: Text('중복확인')
-                  ),
+                padding: const EdgeInsets.fromLTRB(
+                  0,
+                  30,
+                  0,
+                  30,
                 ),
-              TextField(
-                  controller: pwController,
-                  decoration: InputDecoration(
-                    labelText: '비밀번호'
+                child: ElevatedButton(
+                  onPressed: () {
+                    //
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.black,
+                    foregroundColor: Colors.white,
+                    minimumSize: Size(350, 50),
                   ),
+                  child: Text('회원가입'),
                 ),
-              TextField(
-                  controller: nameController,
-                  decoration: InputDecoration(
-                    labelText: '이름'
-                  ),
-                ),
-              TextField(
-                  controller: phoneController,
-                  decoration: InputDecoration(
-                    labelText: '전화번호'
-                  ),
-                ),
-              TextField(
-                  controller: addressController,
-                  decoration: InputDecoration(
-                    labelText: '주소'
-                  ),
-                ),
-              Padding(
-                  padding: const EdgeInsets.fromLTRB(0, 30, 0, 30),
-                  child: ElevatedButton(
-                    onPressed: (){
-                      //
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.black,
-                      foregroundColor: Colors.white,
-                      minimumSize: Size(350, 50)
-                    ),
-                    child: Text('회원가입')
-                  ),
-                ),
+              ),
             ],
           ),
         ),
