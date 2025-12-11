@@ -66,117 +66,165 @@ class _GMainState extends State<GMain> {
       ),
 
       // _MainScreenState 클래스 내부의 build 메서드 리턴 부분 (Scaffold body)
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 20),
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 20),
 
-          // 1. 섹션 타이틀 ('오늘의 추천')
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20.0),
-            child: Text(
-              "오늘의 추천 🔥",
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
+            // 1. 섹션 타이틀 ('오늘의 추천')
+            const Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: 20.0,
+              ),
+              child: Text(
+                "오늘의 추천 🔥",
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 15),
+            const SizedBox(height: 15),
 
-          // 2. 슬라이드 및 버튼 영역 (Stack을 사용하여 겹치기)
-          SizedBox(
-            height: 320, // 카드의 높이 지정
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                // A. 실제 슬라이더 (PageView)
-                PageView.builder(
-                  controller: _pageController,
-                  itemCount: recommendedShoes.length,
-                  itemBuilder: (context, index) {
-                    return _buildShoeCard(
-                      recommendedShoes[index],
-                    );
-                  },
-                ),
+            // 2. 슬라이드 및 버튼 영역 (Stack을 사용하여 겹치기)
+            SizedBox(
+              height: 320, // 카드의 높이 지정
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  // A. 실제 슬라이더 (PageView)
+                  PageView.builder(
+                    controller: _pageController,
+                    itemCount: recommendedShoes.length,
+                    itemBuilder: (context, index) {
+                      return _buildShoeCard(
+                        recommendedShoes[index],
+                      );
+                    },
+                  ),
 
-                // B. 다음 페이지 버튼 (>)
-                Positioned(
-                  right: 15,
-                  child: IconButton(
-                    icon: const Icon(
-                      Icons.arrow_forward_ios,
+                  // B. 다음 페이지 버튼 (>)
+                  Positioned(
+                    right: 15,
+                    child: IconButton(
+                      icon: const Icon(
+                        Icons.arrow_forward_ios,
+                      ),
+                      iconSize: 30,
+                      color: Colors.black,
+                      style: IconButton.styleFrom(
+                        backgroundColor: Colors.white70,
+                        shape: const CircleBorder(),
+                        padding: const EdgeInsets.all(12),
+                      ),
+                      onPressed: _nextPage,
                     ),
-                    iconSize: 30,
-                    color: Colors.black,
-                    style: IconButton.styleFrom(
-                      backgroundColor: Colors.white70,
-                      shape: const CircleBorder(),
-                      padding: const EdgeInsets.all(12),
-                    ),
-                    onPressed: _nextPage,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 15),
+
+            // 3. 페이지 인디케이터 (슬라이더 바)
+            Padding(
+              padding: const EdgeInsets.only(
+                left: 20.0,
+              ), // 왼쪽으로 정렬
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: List.generate(
+                  recommendedShoes.length,
+                  (index) => _buildIndicator(
+                    index == _currentPage,
                   ),
                 ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 15),
-
-          // 3. 페이지 인디케이터 (슬라이더 바)
-          Padding(
-            padding: const EdgeInsets.only(
-              left: 20.0,
-            ), // 왼쪽으로 정렬
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.start,
-              children: List.generate(
-                recommendedShoes.length,
-                (index) =>
-                    _buildIndicator(index == _currentPage),
               ),
             ),
-          ),
 
-          // _GMainState 클래스 내부의 build 메서드 > body: Column의 children[] 목록에 추가
-          const SizedBox(height: 30), // 슬라이더와 인기상품 사이 간격
-          // 4. 섹션 타이틀 ('인기 상품')
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20.0),
-            child: Text(
-              "인기 상품 🏆",
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
+            // _GMainState 클래스 내부의 build 메서드 > body: Column의 children[] 목록에 추가
+            const SizedBox(height: 30), // 슬라이더와 인기상품 사이 간격
+            // 4. 섹션 타이틀 ('인기 상품')
+            const Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: 20.0,
+              ),
+              child: Text(
+                "인기 상품 🏆",
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 15),
+            const SizedBox(height: 15),
 
-          // 5. 인기 상품 가로 스크롤 섹션
-          SizedBox(
-            height:
-                220, // 전체 가로 스크롤 섹션의 높이 지정 (카드 높이 + 텍스트 높이)
-            child: ListView.builder(
-              scrollDirection:
-                  Axis.horizontal, // 핵심: 가로 스크롤 설정
-              padding: const EdgeInsets.symmetric(
-                horizontal: 20,
-              ), // 좌우 패딩
-              itemCount: 5, // 임시로 5개 아이템을 보여주도록 설정
-              itemBuilder: (context, index) {
-                // TODO: 실제 데이터 리스트를 사용하도록 변경해야 합니다.
-                // 현재는 임시 데이터로 "Skechers Go Run" 정보를 사용합니다.
-                return _buildPopularItemCard(
-                  'images/popular_shoe_${index + 1}.png', // 임시 이미지 경로
-                  '스케쳐스',
-                  '고 런 엘리베이트',
-                  '119,000원',
-                );
-              },
+            // 5. 인기 상품 가로 스크롤 섹션
+            SizedBox(
+              height:
+                  220, // 전체 가로 스크롤 섹션의 높이 지정 (카드 높이 + 텍스트 높이)
+              child: ListView.builder(
+                scrollDirection:
+                    Axis.horizontal, // 핵심: 가로 스크롤 설정
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                ), // 좌우 패딩
+                itemCount: 5, // 임시로 5개 아이템을 보여주도록 설정
+                itemBuilder: (context, index) {
+                  // TODO: 실제 데이터 리스트를 사용하도록 변경해야 합니다.
+                  // 현재는 임시 데이터로 "Skechers Go Run" 정보를 사용합니다.
+                  return _buildPopularItemCard(
+                    'images/popular_shoe_${index + 1}.png', // 임시 이미지 경로
+                    '스케쳐스',
+                    '고 런 엘리베이트',
+                    '119,000원',
+                  );
+                },
+              ),
             ),
-          ),
-        ],
+
+            // _GMainState 클래스 내부의 build 메서드 > body: Column의 children[] 목록에 추가
+            const SizedBox(height: 30), // 슬라이더와 인기상품 사이 간격
+            // 5. 섹션 타이틀 ('최근 본 상품')
+            const Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: 20.0,
+              ),
+              child: Text(
+                "최근 본 상품 📍",
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            const SizedBox(height: 15),
+
+            // 5. 인기 상품 가로 스크롤 섹션
+            SizedBox(
+              height:
+                  220, // 전체 가로 스크롤 섹션의 높이 지정 (카드 높이 + 텍스트 높이)
+              child: ListView.builder(
+                scrollDirection:
+                    Axis.horizontal, // 핵심: 가로 스크롤 설정
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                ), // 좌우 패딩
+                itemCount: 5, // 임시로 5개 아이템을 보여주도록 설정
+                itemBuilder: (context, index) {
+                  // TODO: 실제 데이터 리스트를 사용하도록 변경해야 합니다.
+                  // 현재는 임시 데이터로 "Skechers Go Run" 정보를 사용합니다.
+                  return _buildPopularItemCard(
+                    'images/popular_shoe_${index + 1}.png', // 임시 이미지 경로
+                    '스케쳐스',
+                    '고 런 엘리베이트',
+                    '119,000원',
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
       ),
     );
   } //
