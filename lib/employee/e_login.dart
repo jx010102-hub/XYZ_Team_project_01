@@ -1,27 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:xyz_project_01/customer/c_find_id.dart';
-import 'package:xyz_project_01/customer/c_find_pw.dart';
-import 'package:xyz_project_01/customer/c_regist.dart';
-import 'package:xyz_project_01/employee/e_login.dart';
+import 'package:xyz_project_01/employee/e_find_id.dart';
+import 'package:xyz_project_01/employee/e_find_pw.dart';
+import 'package:xyz_project_01/employee/e_regist.dart';
 import 'package:xyz_project_01/goods/g_tabbar.dart';
 import 'package:xyz_project_01/util/message.dart';
-import 'package:xyz_project_01/vm/database/customer_database.dart';
+import 'package:xyz_project_01/vm/database/employee_database.dart';
 
-class CLogin extends StatefulWidget {
-  const CLogin({super.key});
+class ELogin extends StatefulWidget {
+  const ELogin({super.key});
 
   @override
-  State<CLogin> createState() => _CLoginState();
+  State<ELogin> createState() => _ELoginState();
 }
 
-class _CLoginState extends State<CLogin> {
+class _ELoginState extends State<ELogin> {
   // Property
   late TextEditingController idController;
   late TextEditingController pwController;
-  late CustomerDatabase customer;
+  late EmployeeDatabase employee;
   late bool i; // 로그인 체크
-  late int imageTapCount;
 
   Message message = Message();
 
@@ -30,9 +28,8 @@ class _CLoginState extends State<CLogin> {
     super.initState();
     idController = TextEditingController();
     pwController = TextEditingController();
-    customer = CustomerDatabase();
+    employee = EmployeeDatabase();
     i = false;
-    imageTapCount = 0;
   }
 
 
@@ -48,21 +45,7 @@ class _CLoginState extends State<CLogin> {
             children: [
               Padding(
                 padding: const EdgeInsets.fromLTRB(0, 0, 0, 50),
-                child: GestureDetector(
-                onTap: () {
-                  // 이메일 입력창이 xyz
-                  if (idController.text.trim() == "xyz") {
-                    imageTapCount++;
-                    // 3번 누르면 이동
-                    if (imageTapCount >= 3) {
-                      imageTapCount = 0;
-                      Get.offAll(ELogin());
-                    }
-                  }
-                },
-                  child: Image.asset('images/welcome.png',
-                  scale: 4,),
-                ),
+                child: Image.asset('images/admin_logo.png',),
               ),
               TextField(
                 controller: idController,
@@ -93,13 +76,12 @@ class _CLoginState extends State<CLogin> {
                 ),
               ),
               IntrinsicHeight(
-                
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     TextButton(
                       onPressed: (){
-                        Get.to(CRegist());
+                        Get.to(ERegist());
                       },
                       child: Text('회원가입')
                     ),
@@ -112,7 +94,7 @@ class _CLoginState extends State<CLogin> {
                     ),
                     TextButton(
                       onPressed: (){
-                      Get.to(CFindId());
+                      Get.to(EFindId());
                       },
                       child: Text('이메일 찾기')
                     ),
@@ -125,7 +107,7 @@ class _CLoginState extends State<CLogin> {
                     ),
                     TextButton(
                       onPressed: (){
-                      Get.to(CFindPw());
+                      Get.to(EFindPw());
                       },
                       child: Text('비밀번호 찾기')
                     ),
@@ -149,7 +131,7 @@ class _CLoginState extends State<CLogin> {
     // 정상적인 경우
     final id = idController.text.trim();
     final pw = pwController.text.trim();
-    final result = await customer.loginCheck(id, pw);
+    final result = await employee.loginCheck(id, pw);
       if(result){
         Get.defaultDialog(
           title: '로그인',
@@ -178,4 +160,4 @@ class _CLoginState extends State<CLogin> {
   }
 
 
-} // class
+}

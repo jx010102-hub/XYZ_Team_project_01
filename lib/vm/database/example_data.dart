@@ -82,6 +82,7 @@ class ExampleData {
     // {
     //   'eemail': 'xyz@example.com',
     //   'epw': '1234',
+    //   'ename': '김상준',
     //   'ephone': '010-3333-3333',
     //   'erank': 1,
     //   'erole': 1,

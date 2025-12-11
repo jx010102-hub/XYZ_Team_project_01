@@ -14,6 +14,33 @@ class EmployeeDatabase {
     return queryResults.map((e) => Employee.fromMap(e)).toList();
   }
 
+  // 이메일 중복 체크
+  Future<int> idCheck(String id) async {
+    final db = await handler.initializeDB();
+    var result = await db.rawQuery(
+      """
+      select count(*) as count
+      from employee
+      where eemail = ?
+      """,
+      [id],
+    );
+    return Sqflite.firstIntValue(result) ?? 0;
+  }
+
+  // 로그인
+  Future<bool> loginCheck(String id, String pw) async {
+    final Database db = await handler.initializeDB();
+    final List<Map<String, dynamic>> result = await db.rawQuery(
+      """
+      select * from employee
+      where eemail = ? and epw = ?
+      """,
+      [id, pw]
+    );
+    return result.isNotEmpty;
+  }
+
   // 입력
   Future<int> insertEmployee(Employee employee) async{
     int result = 0;
@@ -21,11 +48,11 @@ class EmployeeDatabase {
     result = await db.rawInsert(
       """
         insert into employee
-        (eemail, epw, ephone, erank, erole, epower, workplace, ebid)
+        (eemail, epw, ename, ephone, erank, erole, epower, workplace, ebid)
         values
-        (?,?,?,?,?,?,?,?)
+        (?,?,?,?,?,?,?,?,?)
       """,
-      [employee.eemail, employee.epw, employee.ephone, employee.erank, employee.erole, employee.epower, employee.workplace, employee.ebid]
+      [employee.eemail, employee.epw, employee.ename, employee.ephone, employee.erank, employee.erole, employee.epower, employee.workplace, employee.ebid]
     );
     return result;
   }
@@ -37,10 +64,10 @@ class EmployeeDatabase {
     result = await db.rawUpdate(
       """
       update employee
-      set epw = ?, ephone = ?
+      set epw = ?, ename = ?, ephone = ?
       where eseq = ?
       """,
-      [employee.epw, employee.ephone, employee.eseq]
+      [employee.epw, employee.ename, employee.ephone, employee.eseq]
     );
     return result;
   }
