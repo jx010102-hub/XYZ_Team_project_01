@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:xyz_project_01/customer/c_login.dart';
-import 'package:xyz_project_01/insert/goods_detail_page.dart';
 
 void main() {
   runApp(const MyApp());

@@ -1,5 +1,8 @@
+// g_detail.dart (또는 GoodsDetailPage가 정의된 파일)
+
 import 'package:flutter/material.dart';
 import 'package:xyz_project_01/model/goods.dart';
+import 'package:xyz_project_01/pay/paypage.dart'; // ⭐️ pay.dart 임포트 경로 확인
 
 class GoodsDetailPage extends StatefulWidget {
   final Goods goods;
@@ -18,6 +21,20 @@ class _GoodsDetailPageState extends State<GoodsDetailPage> {
     'images/detail_shoe_1.png',
     'images/detail_shoe_2.png',
     'images/detail_shoe_3.png',
+  ];
+
+  // ⭐️ 옵션 상태 관리 변수
+  String? _selectedSize;
+  String? _selectedColor;
+  int _purchaseQuantity = 1;
+  
+  // ⭐️ 가상의 상품 재고 및 옵션 데이터
+  final List<String> _availableSizes = ['230', '240', '250', '260', '270', '280', '290', '300'];
+  final List<Map<String, dynamic>> _availableColors = [
+    {'name': '그레이', 'hex': 0xFFCCCCCC}, 
+    {'name': '실버', 'hex': 0xFFBDBDBD},
+    {'name': '화이트', 'hex': 0xFFFFFFFF},
+    {'name': '블랙', 'hex': 0xFF000000},
   ];
 
   @override
@@ -73,7 +90,8 @@ class _GoodsDetailPageState extends State<GoodsDetailPage> {
     );
   }
 
-  // _GoodsDetailPageState 클래스 내부
+  // 기존 위젯 함수들 (_buildProductImageSection, _buildPriceAndNameSection, _buildTag, _buildIndicator) 유지
+
   Widget _buildProductImageSection() {
     return SizedBox(
       height: 400, // 이미지 영역 높이
@@ -121,7 +139,7 @@ class _GoodsDetailPageState extends State<GoodsDetailPage> {
                   decoration: BoxDecoration(
                     color: Colors.white,
                     shape: BoxShape.circle,
-                    boxShadow: [
+                    boxShadow: const [
                       BoxShadow(
                         color: Colors.black12,
                         blurRadius: 5,
@@ -143,7 +161,7 @@ class _GoodsDetailPageState extends State<GoodsDetailPage> {
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
+                    boxShadow: const [
                       BoxShadow(
                         color: Colors.black12,
                         blurRadius: 5,
@@ -177,7 +195,6 @@ class _GoodsDetailPageState extends State<GoodsDetailPage> {
     );
   }
 
-  // _GoodsDetailPageState 클래스 내부
   Widget _buildPriceAndNameSection() {
     return Padding(
       padding: const EdgeInsets.all(20.0),
@@ -285,8 +302,8 @@ class _GoodsDetailPageState extends State<GoodsDetailPage> {
       ),
     );
   }
-
-  // _GoodsDetailPageState 클래스 내부
+  
+  // ⭐️ 하단 고정 구매 버튼 바
   Widget _buildBottomPurchaseBar(BuildContext context) {
     return Container(
       height: 80, // 하단 바 높이
@@ -323,7 +340,8 @@ class _GoodsDetailPageState extends State<GoodsDetailPage> {
           Expanded(
             child: ElevatedButton(
               onPressed: () {
-                // TODO: 구매 로직 또는 옵션 선택 팝업 구현
+                // ⭐️ 구매하기 버튼 클릭 시 옵션 선택 바텀 시트 호출
+                _showPurchaseOptions(context); 
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red,
@@ -347,6 +365,290 @@ class _GoodsDetailPageState extends State<GoodsDetailPage> {
           ),
         ],
       ),
+    );
+  }
+  
+  // ⭐️⭐️⭐️ 옵션 선택 바텀 시트 (ShowModalBottomSheet) ⭐️⭐️⭐️
+  void _showPurchaseOptions(BuildContext context) {
+    // 옵션 초기화 (선택이 없었다면)
+    if (_selectedSize == null && _availableSizes.isNotEmpty) {
+      _selectedSize = _availableSizes.first;
+    }
+    if (_selectedColor == null && _availableColors.isNotEmpty) {
+      _selectedColor = _availableColors.first['name'] as String;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true, 
+      builder: (BuildContext bc) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setModalState) {
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.75, 
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 닫기 핸들
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 5,
+                      margin: const EdgeInsets.only(bottom: 20),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                        borderRadius: BorderRadius.circular(2.5),
+                      ),
+                    ),
+                  ),
+                  const Text(
+                    '구매하기',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const Divider(height: 30),
+                  
+                  // 1. 선택된 상품 정보
+                  _buildOptionProductInfo(widget.goods),
+                  
+                  const Divider(height: 30),
+                  
+                  // 2. 사이즈 옵션
+                  const Text('사이즈', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 10),
+                  // 스크롤 가능한 Wrap으로 변경
+                  SizedBox(
+                    height: 100, // 사이즈 옵션이 많을 경우 스크롤 가능하게 제한
+                    child: SingleChildScrollView(
+                      child: _buildSizeOptions(setModalState),
+                    ),
+                  ),
+                  
+                  const Divider(height: 30),
+                  
+                  // 3. 색상 옵션
+                  const Text('색깔', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 10),
+                  _buildColorOptions(setModalState),
+
+                  // 4. 수량 선택 섹션 (사진과 같은 UI 구현)
+                  if (_selectedSize != null && _selectedColor != null)
+                    _buildQuantitySelector(setModalState),
+
+                  const Spacer(),
+                  
+                  // 5. 하단 버튼 바 (장바구니 담기, 바로 구매하기)
+                  _buildOptionBottomBar(context),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+  
+  // 바텀 시트 내부 - 상품 정보
+  Widget _buildOptionProductInfo(Goods goods) {
+    return Row(
+      children: [
+        Image.asset('images/shoe1.png', width: 60, height: 60), // 임시 이미지 경로
+        const SizedBox(width: 10),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(goods.gname, style: const TextStyle(fontWeight: FontWeight.bold)),
+            Text(goods.gengname, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+          ],
+        ),
+      ],
+    );
+  }
+  
+  // 바텀 시트 내부 - 사이즈 옵션 위젯
+  Widget _buildSizeOptions(StateSetter setModalState) {
+    return Wrap(
+      spacing: 8.0,
+      runSpacing: 8.0,
+      children: _availableSizes.map((size) {
+        bool isSelected = _selectedSize == size;
+        return GestureDetector(
+          onTap: () {
+            setModalState(() {
+              _selectedSize = size;
+            });
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
+            decoration: BoxDecoration(
+              color: isSelected ? Colors.grey.shade800 : Colors.grey.shade200,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: isSelected ? Colors.grey.shade800 : Colors.transparent),
+            ),
+            child: Text(
+              size,
+              style: TextStyle(
+                color: isSelected ? Colors.white : Colors.black,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  // 바텀 시트 내부 - 색상 옵션 위젯
+  Widget _buildColorOptions(StateSetter setModalState) {
+    return Wrap(
+      spacing: 15.0,
+      children: _availableColors.map((colorMap) {
+        String colorName = colorMap['name'] as String;
+        Color colorValue = Color(colorMap['hex'] as int);
+        bool isSelected = _selectedColor == colorName;
+
+        return Column(
+          children: [
+            GestureDetector(
+              onTap: () {
+                setModalState(() {
+                  _selectedColor = colorName;
+                });
+              },
+              child: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: colorValue,
+                  border: Border.all(
+                    color: Colors.grey.shade400,
+                    width: isSelected ? 3.0 : 1.0,
+                  ),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: isSelected 
+                    ? Icon(Icons.check, color: colorValue.computeLuminance() > 0.5 ? Colors.black : Colors.white) 
+                    : null,
+              ),
+            ),
+            const SizedBox(height: 5),
+            Text(colorName, style: TextStyle(fontSize: 12, color: isSelected ? Colors.black : Colors.grey)),
+          ],
+        );
+      }).toList(),
+    );
+  }
+  
+  // 바텀 시트 내부 - 수량 선택 위젯
+  Widget _buildQuantitySelector(StateSetter setModalState) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 20.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // 선택된 옵션 정보 (디자인과 유사하게 S 또는 옵션 표시)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: Colors.blue,
+              borderRadius: BorderRadius.circular(15),
+            ),
+            child: Text(
+              '${_selectedSize ?? '사이즈'} / ${_selectedColor ?? '색상'}',
+              style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+            ),
+          ),
+          
+          // 수량 조절 버튼
+          Container(
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey.shade400),
+              borderRadius: BorderRadius.circular(5),
+            ),
+            child: Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.remove, size: 20),
+                  onPressed: () {
+                    if (_purchaseQuantity > 1) {
+                      setModalState(() {
+                        _purchaseQuantity--;
+                      });
+                    }
+                  },
+                ),
+                Text('$_purchaseQuantity', style: const TextStyle(fontSize: 16)),
+                IconButton(
+                  icon: const Icon(Icons.add, size: 20),
+                  onPressed: () {
+                    setModalState(() {
+                      _purchaseQuantity++;
+                    });
+                  },
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  // 바텀 시트 내부 - 하단 버튼 바 (장바구니/구매)
+  Widget _buildOptionBottomBar(BuildContext context) {
+    return Row(
+      children: [
+        // 장바구니 담기 버튼
+        Expanded(
+          child: ElevatedButton(
+            onPressed: () {
+              // TODO: 장바구니 담기 로직
+              Navigator.pop(context); 
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('${widget.goods.gname} (${_selectedSize}/${_selectedColor}) ${_purchaseQuantity}개가 장바구니에 담겼습니다.')),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.grey.shade700,
+              minimumSize: const Size(double.infinity, 50),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('장바구니 담기', style: TextStyle(color: Colors.white, fontSize: 16)),
+          ),
+        ),
+        const SizedBox(width: 10),
+        
+        // 바로 구매하기 버튼
+        Expanded(
+          child: ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context); // 시트 닫기
+              // pay.dart 페이지로 이동
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => PayPage(
+                    goods: widget.goods,
+                    selectedSize: _selectedSize ?? _availableSizes.first,
+                    selectedColor: _selectedColor ?? _availableColors.first['name'] as String,
+                    quantity: _purchaseQuantity,
+                  ),
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              minimumSize: const Size(double.infinity, 50),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('바로 구매하기', style: TextStyle(color: Colors.white, fontSize: 16)),
+          ),
+        ),
+      ],
     );
   }
 }

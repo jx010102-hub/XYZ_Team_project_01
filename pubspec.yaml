@@ -62,6 +62,9 @@ dependencies:
   # Charts
   syncfusion_flutter_charts: ^31.2.18
 
+  # 계산
+  intl: ^0.18.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
