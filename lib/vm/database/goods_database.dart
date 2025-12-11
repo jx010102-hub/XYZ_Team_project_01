@@ -145,4 +145,37 @@ class GoodsDatabase {
     if (result.isEmpty) return null;
     return Goods.fromMap(result.first);
   }
+  // lib/vm/database/goods_database.dart 파일 내용 (GoodsDatabase 클래스 내부에 추가)
+
+// ... (기존 query, insert, update, delete 함수 유지)
+
+  // ⭐️⭐️⭐️ 상품 재고(gqty)를 업데이트하는 함수 ⭐️⭐️⭐️
+  // quantityChange는 재고 증가(+값) 또는 감소(-값)입니다.
+  Future<int> updateGoodsQuantity({required int gseq, required int quantityChange}) async{
+    int result = 0;
+    final Database db = await handler.initializeDB();
+    
+    // 현재 재고를 가져와서 계산
+    final List<Map<String, Object?>> query = await db.rawQuery(
+      'select gqty from goods where gseq = ?', [gseq]
+    );
+
+    if (query.isNotEmpty) {
+      int currentQty = query.first['gqty'] as int;
+      int newQty = currentQty + quantityChange;
+
+      if (newQty < 0) {
+        // 재고 부족 시 0으로 설정
+        newQty = 0;
+        print("경고: 재고가 부족하여 0으로 설정되었습니다.");
+      }
+
+      // 재고 업데이트
+      result = await db.rawUpdate(
+        'update goods set gqty = ? where gseq = ?',
+        [newQty, gseq]
+      );
+    }
+    return result;
+  }
 }

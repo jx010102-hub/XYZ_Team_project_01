@@ -1,24 +1,53 @@
+// lib/insert/goods_Info_Page.dart 파일 전체 내용
+
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
-import 'package:get/get.dart'; // Get.back() 또는 Get.to() 사용을 위해 추가
+import 'package:get/get.dart';
+import 'package:xyz_project_01/model/goods.dart'; // Goods 모델 임포트
 
 class GoodsInfoPage extends StatefulWidget {
-  // 만약 GoodsDetailPage에서 데이터를 전달받았다면 final Goods? goods; 추가
-  const GoodsInfoPage({super.key});
+  // ⭐️ GoodsDetailPage에서 전달받은 Goods 객체를 받습니다. (필수)
+  final Goods goods;
+  
+  const GoodsInfoPage({super.key, required this.goods});
 
   @override
-  State<GoodsInfoPage> createState() =>
-      _GoodsInfoPageState();
+  State<GoodsInfoPage> createState() => _GoodsInfoPageState();
 }
 
 class _GoodsInfoPageState extends State<GoodsInfoPage> {
-  // ⭐️ 이미지 에셋 경로 정의 (사용자 제공 파일 이름 기반)
-  final Map<String, String> _infoImages = {
-    '사이즈': 'images/size1.png',
-    'MAIN': 'images/main1.png',
-    'TOP': 'images/top1.png',
-    'BACK': 'images/back1.png',
-    'SIDE': 'images/side1.png',
-  };
+  // ⭐️ 상품의 DB 이미지들을 리스트로 구성합니다.
+  List<Uint8List> _infoImages = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _configureImages();
+  }
+  
+  // DB에서 전달받은 상품 이미지를 리스트로 구성하는 함수
+  void _configureImages() {
+    final List<Uint8List?> images = [
+      widget.goods.mainimage,
+      widget.goods.topimage,
+      widget.goods.backimage,
+      widget.goods.sideimage,
+    ];
+
+    // null이 아닌 유효한 이미지만 필터링하고 중복을 제거합니다.
+    _infoImages = images
+        .whereType<Uint8List>()
+        .toSet()
+        .toList();
+    
+    // 이미지가 전혀 없을 경우 대체 이미지를 추가할 수 있습니다.
+    if (_infoImages.isEmpty) {
+        // 임시 대체 로직 (필요 시 에러 에셋 추가)
+        print("경고: ${widget.goods.gname}에 DB 이미지가 없습니다.");
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -27,80 +56,73 @@ class _GoodsInfoPageState extends State<GoodsInfoPage> {
         // 앱바 배경색 투명/흰색 설정
         backgroundColor: Colors.white,
         elevation: 0,
-        automaticallyImplyLeading: false, // 기본 뒤로가기 버튼 제거
+        centerTitle: true,
+        title: Text(
+          '${widget.goods.gname} 제품 상세 정보', // 상품 이름 반영
+          style: const TextStyle(color: Colors.black, fontSize: 16),
+        ),
+        automaticallyImplyLeading: false, 
         actions: [
-          // ❌ 닫기 버튼 (사용자 요청 아이콘)
+          // 닫기 버튼
           IconButton(
             onPressed: () {
-              // Get.back()을 사용하여 이전 화면으로 돌아갑니다. (Get 패키지 사용 가정)
-              Get.back();
+              Get.back(); // 이전 화면으로 돌아가기
             },
             icon: const Icon(
-              Icons.close, // 닫기 아이콘
+              Icons.close, 
               color: Colors.black,
             ),
           ),
         ],
       ),
 
-      // 스크롤 가능하도록 SingleChildScrollView 사용
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 1. 사이즈 정보 섹션 (size1.png)
-            _buildInfoSection(
-              title: '사이즈', // 이미지에는 KM, 225... 로 표시된 표
-              imagePath: _infoImages['사이즈']!,
-              showTitle:
-                  false, // 이미지 자체가 제목 역할을 하므로 제목 텍스트는 생략
+            // 1. 제품 기본 정보 섹션
+            _buildProductTitleSection(),
+            
+            const Divider(
+              height: 10,
+              thickness: 8,
+              color: Color(0xFFF5F5F5),
+            ), 
+
+            // 2. DB 이미지들을 순서대로 표시
+            ..._infoImages.asMap().entries.map((entry) {
+              int index = entry.key;
+              Uint8List imageBytes = entry.value;
+              
+              String title = '제품 이미지 ${index + 1}';
+              if (index == 0) title = 'MAIN IMAGE';
+              if (index == 1) title = 'TOP VIEW';
+              
+              return Column(
+                children: [
+                  _buildInfoSection(
+                    title: title,
+                    imageBytes: imageBytes,
+                  ),
+                  const Divider(
+                    height: 10,
+                    thickness: 8,
+                    color: Color(0xFFF5F5F5),
+                  ),
+                ],
+              );
+            }).toList(),
+            
+            // 3. (임시) 사이즈 정보 섹션 (DB 이미지가 없으므로 하드코딩 에셋 재사용)
+            _buildAssetInfoSection(
+              title: '사이즈 정보',
+              imagePath: 'images/size1.png', // 기존 하드코딩 에셋 사용
             ),
 
             const Divider(
               height: 10,
               thickness: 8,
               color: Color(0xFFF5F5F5),
-            ), // 섹션 구분선
-            // 2. MAIN 이미지 섹션 (main1.png)
-            _buildInfoSection(
-              title: 'MAIN',
-              imagePath: _infoImages['MAIN']!,
-            ),
-
-            const Divider(
-              height: 10,
-              thickness: 8,
-              color: Color(0xFFF5F5F5),
-            ),
-
-            // 3. TOP 이미지 섹션 (top1.png)
-            _buildInfoSection(
-              title: 'TOP',
-              imagePath: _infoImages['TOP']!,
-            ),
-
-            const Divider(
-              height: 10,
-              thickness: 8,
-              color: Color(0xFFF5F5F5),
-            ),
-
-            // 4. BACK 이미지 섹션 (back1.png)
-            _buildInfoSection(
-              title: 'BACK',
-              imagePath: _infoImages['BACK']!,
-            ),
-
-            const Divider(
-              height: 10,
-              thickness: 8,
-              color: Color(0xFFF5F5F5),
-            ),
-
-            // 5. SIDE (측면) 정보를 위한 구분선/여백 (side1.png를 위해)
-            _buildInfoSection(
-              title: 'SIDE',
-              imagePath: _infoImages['SIDE']!,
             ),
 
             // 하단 NavBar와 겹치지 않도록 여백 추가
@@ -109,13 +131,98 @@ class _GoodsInfoPageState extends State<GoodsInfoPage> {
         ),
       ),
 
-      // 하단 고정 구매 버튼 바 (GoodsDetailPage의 UI 재사용 가정)
+      // 하단 고정 구매 버튼 바
       bottomNavigationBar: _buildBottomPurchaseBar(),
     );
   }
 
-  // ⭐️ 상세 정보 이미지 섹션 위젯
+  // ⭐️ 제품명 및 간략 정보 표시 섹션
+  Widget _buildProductTitleSection() {
+    return Padding(
+      padding: const EdgeInsets.all(20.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            widget.goods.gname,
+            style: const TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: Colors.black,
+            ),
+          ),
+          const SizedBox(height: 5),
+          Text(
+            widget.goods.gengname,
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.grey[600],
+            ),
+          ),
+          const SizedBox(height: 10),
+          // ⭐️ 가격은 고정된 150,000원으로 표시
+          const Text(
+            "150,000원",
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.red,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+
+  // ⭐️ 상세 정보 이미지 섹션 위젯 (DB 이미지 사용)
   Widget _buildInfoSection({
+    required String title,
+    required Uint8List imageBytes,
+    bool showTitle = true,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (showTitle)
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 20.0,
+              vertical: 15.0,
+            ),
+            child: Text(
+              title,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+
+        // DB에서 가져온 Uint8List 이미지 표시
+        Image.memory(
+          imageBytes,
+          fit: BoxFit.cover,
+          width: double.infinity,
+          errorBuilder: (context, error, stackTrace) {
+            return Container(
+              height: 200,
+              color: Colors.grey.shade200,
+              alignment: Alignment.center,
+              child: const Text(
+                '이미지 로드 실패 (DB)',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.red),
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+  
+  // ⭐️ 상세 정보 이미지 섹션 위젯 (하드코딩된 에셋 경로 사용 - size1.png 등)
+  Widget _buildAssetInfoSection({
     required String title,
     required String imagePath,
     bool showTitle = true,
@@ -138,21 +245,20 @@ class _GoodsInfoPageState extends State<GoodsInfoPage> {
             ),
           ),
 
-        // 이미지 표시 (가로 전체 채우기)
+        // 에셋 경로 이미지 표시
         Image.asset(
           imagePath,
           fit: BoxFit.cover,
           width: double.infinity,
-          // 이미지 로드 실패 시 대체 UI
           errorBuilder: (context, error, stackTrace) {
             return Container(
               height: 200,
               color: Colors.grey.shade200,
               alignment: Alignment.center,
               child: Text(
-                '이미지 로드 실패: $imagePath\n(에셋 경로를 확인하세요)',
+                '이미지 로드 실패: $imagePath',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.red),
+                style: const TextStyle(color: Colors.red),
               ),
             );
           },
@@ -161,7 +267,8 @@ class _GoodsInfoPageState extends State<GoodsInfoPage> {
     );
   }
 
-  // ⭐️ 하단 고정 구매 버튼 바 (GoodsDetailPage의 UI와 동일하게 구성)
+
+  // ⭐️ 하단 고정 구매 버튼 바
   Widget _buildBottomPurchaseBar() {
     return Container(
       height: 80,
@@ -198,9 +305,9 @@ class _GoodsInfoPageState extends State<GoodsInfoPage> {
           Expanded(
             child: ElevatedButton(
               onPressed: () {
-                // TODO: 실제 구매 로직 또는 옵션 선택 바텀 시트 호출 로직 추가
-                // 현재 페이지는 정보만 보여주므로, 만약 여기서 구매를 원하면 GoodsDetailPage로 돌아가거나,
-                // 아니면 모달을 띄워서 옵션을 선택하게 해야 합니다.
+                // 제품 정보 페이지에서 '구매하기' 버튼을 누르면
+                // GoodsDetailPage로 돌아가서 옵션 선택 바텀 시트를 띄웁니다.
+                Get.back(); 
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red,

@@ -1,7 +1,12 @@
+// lib/g_main.dart 파일 전체 내용
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:xyz_project_01/insert/goods_detail_page.dart';
 import 'package:xyz_project_01/model/goods.dart';
+import 'package:xyz_project_01/vm/database/goods_database.dart';
+import 'dart:math';
+import 'dart:typed_data'; // Uint8List 사용을 위해 추가
 
 class GMain extends StatefulWidget {
   const GMain({super.key});
@@ -15,17 +20,20 @@ class _GMainState extends State<GMain> {
     viewportFraction: 0.85,
   );
   int _currentPage = 0;
-  final List recommendedShoes = [
-    'images/shoe1.png',
-    'images/shoe2.png',
-    'images/shoe3.png',
-    'images/shoe4.png',
-  ];
+  
+  // DB에서 불러올 실제 상품 리스트 (대표 상품만 포함)
+  List<Goods> recommendedGoods = []; // 오늘의 추천 (슬라이더)
+  List<Goods> popularGoods = [];     // 인기 상품 (가로 스크롤)
+  List<Goods> recentGoods = [];      // 최근 본 상품 (가로 스크롤)
+  
+  // 로딩 상태 변수
+  bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    // 페이지가 변경될 때마다 _currentPage를 업데이트하도록 리스너 추가
+    _loadGoodsData(); 
+    
     _pageController.addListener(() {
       int next = _pageController.page!.round();
       if (_currentPage != next) {
@@ -36,6 +44,69 @@ class _GMainState extends State<GMain> {
     });
   }
 
+  // ⭐️⭐️⭐️ _loadGoodsData 함수: 상품 그룹별 추출 및 섹션별 중복 추출 허용 ⭐️⭐️⭐️
+  Future<void> _loadGoodsData() async {
+    final goodsDB = GoodsDatabase();
+    final all = await goodsDB.queryGoods();
+    
+    print("====================================");
+    print("DB에서 불러온 전체 상품 수 (옵션 포함): ${all.length}"); 
+    
+    if (all.isNotEmpty) {
+      // 1. GNAME별로 그룹화하고, 각 그룹의 첫 번째 항목만 추출 (대표 상품)
+      final Map<String, Goods> uniqueGoodsMap = {};
+      
+      for (var goods in all) {
+        if (!uniqueGoodsMap.containsKey(goods.gname)) {
+          uniqueGoodsMap[goods.gname] = goods;
+        }
+      }
+      
+      // 2. 대표 상품 리스트 생성
+      List<Goods> representativeGoods = uniqueGoodsMap.values.toList();
+      final int totalCount = representativeGoods.length;
+      
+      // 상품 그룹이 없다면 로딩 해제 후 종료
+      if (totalCount == 0) {
+          setState(() {
+            isLoading = false;
+          });
+          print("Error: 대표 상품 그룹이 없습니다.");
+          print("====================================");
+          return;
+      }
+      
+      // 3. 섹션별로 독립적으로 무작위 추출 및 할당 (겹침 허용)
+      
+      // '오늘의 추천' (슬라이더, 최대 4개)
+      representativeGoods.shuffle(Random()); 
+      recommendedGoods = representativeGoods.take(min(4, totalCount)).toList();
+
+      // '인기 상품' (가로 스크롤, 최대 5개)
+      representativeGoods.shuffle(Random()); 
+      popularGoods = representativeGoods.take(min(5, totalCount)).toList();
+
+      // '최근 본 상품' (가로 스크롤, 최대 5개)
+      representativeGoods.shuffle(Random()); 
+      recentGoods = representativeGoods.take(min(5, totalCount)).toList();
+      
+      
+      print("✅ 대표 상품 그룹 로드 성공. 총 그룹 수: $totalCount");
+      print("✅ 섹션별 중복 추출 완료.");
+      print("====================================");
+      
+      setState(() {
+        isLoading = false;
+      });
+    } else {
+      setState(() {
+        isLoading = false;
+      });
+      print("Error: 상품 데이터가 DB에 없어 로딩을 해제합니다.");
+      print("====================================");
+    }
+  }
+
   @override
   void dispose() {
     _pageController.dispose();
@@ -44,6 +115,15 @@ class _GMainState extends State<GMain> {
 
   @override
   Widget build(BuildContext context) {
+    // 로딩 화면
+    if (isLoading) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+    
     return Scaffold(
       appBar: AppBar(
         title: Image.asset(
@@ -57,18 +137,17 @@ class _GMainState extends State<GMain> {
             onPressed: () {
               //
             },
-            icon: Icon(Icons.search),
+            icon: const Icon(Icons.search),
           ),
           IconButton(
             onPressed: () {
               //
             },
-            icon: Icon(Icons.notifications),
+            icon: const Icon(Icons.notifications),
           ),
         ],
       ),
 
-      // _MainScreenState 클래스 내부의 build 메서드 리턴 부분 (Scaffold body)
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -99,10 +178,10 @@ class _GMainState extends State<GMain> {
                   // A. 실제 슬라이더 (PageView)
                   PageView.builder(
                     controller: _pageController,
-                    itemCount: recommendedShoes.length,
+                    itemCount: recommendedGoods.length, 
                     itemBuilder: (context, index) {
                       return _buildShoeCard(
-                        recommendedShoes[index],
+                        recommendedGoods[index], 
                       );
                     },
                   ),
@@ -137,7 +216,7 @@ class _GMainState extends State<GMain> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.start,
                 children: List.generate(
-                  recommendedShoes.length,
+                  recommendedGoods.length, 
                   (index) => _buildIndicator(
                     index == _currentPage,
                   ),
@@ -145,8 +224,7 @@ class _GMainState extends State<GMain> {
               ),
             ),
 
-            // _GMainState 클래스 내부의 build 메서드 > body: Column의 children[] 목록에 추가
-            const SizedBox(height: 30), // 슬라이더와 인기상품 사이 간격
+            const SizedBox(height: 30),
             // 4. 섹션 타이틀 ('인기 상품')
             const Padding(
               padding: EdgeInsets.symmetric(
@@ -164,31 +242,23 @@ class _GMainState extends State<GMain> {
 
             // 5. 인기 상품 가로 스크롤 섹션
             SizedBox(
-              height:
-                  220, // 전체 가로 스크롤 섹션의 높이 지정 (카드 높이 + 텍스트 높이)
+              height: 220,
               child: ListView.builder(
-                scrollDirection:
-                    Axis.horizontal, // 핵심: 가로 스크롤 설정
+                scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 20,
-                ), // 좌우 패딩
-                itemCount: 5, // 임시로 5개 아이템을 보여주도록 설정
+                ),
+                itemCount: popularGoods.length, 
                 itemBuilder: (context, index) {
-                  // TODO: 실제 데이터 리스트를 사용하도록 변경해야 합니다.
-                  // 현재는 임시 데이터로 "Skechers Go Run" 정보를 사용합니다.
                   return _buildPopularItemCard(
-                    'images/popular_shoe_${index + 1}.png', // 임시 이미지 경로
-                    '스케쳐스',
-                    '고 런 엘리베이트',
-                    '119,000원',
+                    popularGoods[index], 
                   );
                 },
               ),
             ),
 
-            // _GMainState 클래스 내부의 build 메서드 > body: Column의 children[] 목록에 추가
-            const SizedBox(height: 30), // 슬라이더와 인기상품 사이 간격
-            // 5. 섹션 타이틀 ('최근 본 상품')
+            const SizedBox(height: 30),
+            // 6. 섹션 타이틀 ('최근 본 상품')
             const Padding(
               padding: EdgeInsets.symmetric(
                 horizontal: 20.0,
@@ -203,55 +273,39 @@ class _GMainState extends State<GMain> {
             ),
             const SizedBox(height: 15),
 
-            // 5. 인기 상품 가로 스크롤 섹션
+            // 7. 최근 본 상품 가로 스크롤 섹션
             SizedBox(
-              height:
-                  220, // 전체 가로 스크롤 섹션의 높이 지정 (카드 높이 + 텍스트 높이)
+              height: 220,
               child: ListView.builder(
-                scrollDirection:
-                    Axis.horizontal, // 핵심: 가로 스크롤 설정
+                scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 20,
-                ), // 좌우 패딩
-                itemCount: 5, // 임시로 5개 아이템을 보여주도록 설정
+                ),
+                itemCount: recentGoods.length, 
                 itemBuilder: (context, index) {
-                  // TODO: 실제 데이터 리스트를 사용하도록 변경해야 합니다.
-                  // 현재는 임시 데이터로 "Skechers Go Run" 정보를 사용합니다.
                   return _buildPopularItemCard(
-                    'images/popular_shoe_${index + 1}.png', // 임시 이미지 경로
-                    '스케쳐스',
-                    '고 런 엘리베이트',
-                    '119,000원',
+                    recentGoods[index], 
                   );
                 },
               ),
             ),
+            const SizedBox(height: 40), 
           ],
         ),
       ),
     );
-  } //
+  }
 
-  // _GMainState 클래스 내부
-  Widget _buildShoeCard(String imagePath) {
-    // 상품 상세 페이지로 전달할 임시 Goods 객체 생성 (동일)
-    final Goods dummyGoods = Goods(
-      gsumamount: 50,
-      gname: "오늘의 추천 특별 한정판 신발",
-      gengname: "Today's Recommended Exclusive Shoe",
-      gsize: "270",
-      gcolor: "Black",
-      gcategory: "스니커즈",
-    );
-
+  // ⭐️ _buildShoeCard 함수: 가격 고정 및 이미지 처리 ⭐️
+  Widget _buildShoeCard(Goods goods) {
     return GestureDetector(
       onTap: () {
-        Get.to(GoodsDetailPage(goods: dummyGoods));
+        Get.to(GoodsDetailPage(goods: goods));
       },
       child: Container(
         margin: const EdgeInsets.symmetric(
           horizontal: 10,
-        ), // 카드 간 간격
+        ),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
@@ -266,58 +320,56 @@ class _GMainState extends State<GMain> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 신발 이미지 영역
+            // 신발 이미지 영역 (DB에서 불러온 이미지 사용)
             Expanded(
               child: ClipRRect(
                 borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(20),
                 ),
-                child: Image.asset(
-                  imagePath, // 전달받은 이미지 경로 사용
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  // 이미지 로딩 오류 발생 시 간단한 대체 화면
-                  errorBuilder:
-                      (context, error, stackTrace) {
-                        return const Center(
-                          child: Icon(
-                            Icons.error,
-                            color: Colors.red,
-                          ),
-                        );
-                      },
-                ),
+                child: goods.mainimage != null && goods.mainimage is Uint8List
+                    ? Image.memory(
+                        goods.mainimage!, 
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                      )
+                    : const Center( 
+                        child: Icon(
+                          Icons.image_not_supported,
+                          color: Colors.grey,
+                        ),
+                      ),
               ),
             ),
 
-            // 임시 텍스트 정보 영역 (이미지 경로만 받으므로 임시로 넣었습니다)
-            const Padding(
-              padding: EdgeInsets.all(15.0),
+            // 텍스트 정보 영역 (Goods 객체의 실제 정보 사용)
+            Padding(
+              padding: const EdgeInsets.all(15.0),
               child: Column(
                 crossAxisAlignment:
                     CrossAxisAlignment.start,
                 children: [
                   Text(
-                    "BEST BRAND",
-                    style: TextStyle(
+                    goods.gcategory, // 카테고리 사용
+                    style: const TextStyle(
                       color: Colors.grey,
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  SizedBox(height: 5),
+                  const SizedBox(height: 5),
                   Text(
-                    "Best Recommended Shoe",
-                    style: TextStyle(
+                    goods.gname, // 제품명 사용
+                    style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  SizedBox(height: 5),
-                  Text(
-                    "159,000원",
+                  const SizedBox(height: 5),
+                  // 금액 표시: "150,000원"으로 고정
+                  const Text(
+                    "150,000원", 
                     style: TextStyle(
                       fontSize: 16,
                       color: Colors.blueAccent,
@@ -333,30 +385,14 @@ class _GMainState extends State<GMain> {
     );
   }
 
-  // _GMainState 클래스 내부
-  Widget _buildPopularItemCard(
-    String imagePath,
-    String brand,
-    String name,
-    String price,
-  ) {
-    // 요청하신 '위쪽 슬라이드 사진 보다 반 정도의 크기'를 반영하여 높이를 120으로 설정
-    const double cardWidth = 150; // 카드의 너비
-    const double imageBoxHeight = 120; // 이미지 영역의 높이
-
-    // 상품 상세 페이지로 전달할 임시 Goods 객체 생성 (동일)
-    final Goods dummyGoods = Goods(
-      gsumamount: 30,
-      gname: name,
-      gengname: brand,
-      gsize: "250",
-      gcolor: "Navy",
-      gcategory: "러닝화",
-    );
+  // ⭐️ _buildPopularItemCard 함수: 가격 고정 및 이미지 처리 ⭐️
+  Widget _buildPopularItemCard(Goods goods) {
+    const double cardWidth = 150;
+    const double imageBoxHeight = 120;
 
     return GestureDetector(
       onTap: () {
-        Get.to(GoodsDetailPage(goods: dummyGoods));
+        Get.to(GoodsDetailPage(goods: goods));
       },
       child: Container(
         width: cardWidth,
@@ -364,36 +400,34 @@ class _GMainState extends State<GMain> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 1. 이미지 박스 (슬라이드 박스 높이 320의 반 정도인 120으로 설정)
+            // 1. 이미지 박스 (DB에서 불러온 이미지 사용)
             Container(
               height: imageBoxHeight,
               width: cardWidth,
               decoration: BoxDecoration(
-                color: Colors.grey[200], // 배경색을 살짝 넣어줍니다.
+                color: Colors.grey[200],
                 borderRadius: BorderRadius.circular(10),
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(10),
-                child: Image.asset(
-                  imagePath,
-                  fit: BoxFit.cover,
-                  errorBuilder:
-                      (context, error, stackTrace) {
-                        return const Center(
-                          child: Icon(
-                            Icons.shopping_bag,
-                            color: Colors.grey,
-                          ),
-                        );
-                      },
-                ),
+                child: goods.mainimage != null && goods.mainimage is Uint8List
+                    ? Image.memory(
+                        goods.mainimage!, 
+                        fit: BoxFit.cover,
+                      )
+                    : const Center(
+                        child: Icon(
+                          Icons.shopping_bag,
+                          color: Colors.grey,
+                        ),
+                      ),
               ),
             ),
             const SizedBox(height: 8),
 
             // 2. 텍스트 정보
             Text(
-              brand, // '스케쳐스'
+              goods.gengname, // 영문명(브랜드 역할로 가정) 사용
               style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
@@ -402,7 +436,7 @@ class _GMainState extends State<GMain> {
             ),
             const SizedBox(height: 2),
             Text(
-              name, // '고 런 엘리베이트'
+              goods.gname, // 제품명 사용
               style: TextStyle(
                 fontSize: 12,
                 color: Colors.grey[600],
@@ -410,9 +444,10 @@ class _GMainState extends State<GMain> {
               overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 5),
-            Text(
-              price, // '119,000원'
-              style: const TextStyle(
+            // 금액 표시: "150,000원"으로 고정
+            const Text(
+              "150,000원", 
+              style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
                 color: Colors.blueAccent,
@@ -423,7 +458,7 @@ class _GMainState extends State<GMain> {
       ),
     );
   }
-
+  
   // _GMainState 클래스 내부
   // 페이지 인디케이터 동그라미 위젯
   Widget _buildIndicator(bool isActive) {
@@ -441,11 +476,9 @@ class _GMainState extends State<GMain> {
     );
   }
 
-  //-------function
-
   // 다음 페이지로 이동하는 함수
   void _nextPage() {
-    if (_currentPage < recommendedShoes.length - 1) {
+    if (_currentPage < recommendedGoods.length - 1) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 400),
         curve: Curves.easeOut,
@@ -459,4 +492,4 @@ class _GMainState extends State<GMain> {
       );
     }
   }
-} //
+}

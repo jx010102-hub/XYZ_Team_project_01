@@ -31,15 +31,15 @@ class Goods {         // 신발 (상품)
   );
 
   Goods.fromMap(Map<String, dynamic> res)
-    : gseq = res['gseq'],
-      gsumamount = res['gsumamount'],
-      gname = res['gname'],
-      gengname = res['gengname'],
-      gsize = res['gsize'],
-      gcolor = res['gcolor'],
-      gcategory = res['gcategory'],
-      mainimage = res['mainimage'],
-      topimage = res['topimage'],
-      backimage = res['backimage'],
-      sideimage = res['sideimage'];
+    : gseq = res['gseq'] as int?,
+      gsumamount = res['gsumamount'] as int,
+      gname = res['gname'] as String,
+      gengname = res['gengname'] as String,
+      gsize = res['gsize'] as String,
+      gcolor = res['gcolor'] as String,
+      gcategory = res['gcategory'] as String,
+      mainimage = res['mainimage'] as Uint8List?,
+      topimage = res['topimage'] as Uint8List?,
+      backimage = res['backimage'] as Uint8List?,
+      sideimage = res['sideimage'] as Uint8List?;
 }
