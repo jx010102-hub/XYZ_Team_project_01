@@ -245,7 +245,6 @@ class _GMainState extends State<GMain> {
 
   //-------
 
-  // _MainScreenState 클래스 내부
   // 다음 페이지로 이동하는 함수
   void _nextPage() {
     if (_currentPage < recommendedShoes.length - 1) {
