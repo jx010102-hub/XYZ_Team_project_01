@@ -1,27 +1,37 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:xyz_project_01/customer/c_login.dart';
-import 'package:xyz_project_01/model/customer.dart';
+import 'package:xyz_project_01/employee/e_login.dart';
+import 'package:xyz_project_01/model/employee.dart';
 import 'package:xyz_project_01/util/message.dart';
-import 'package:xyz_project_01/vm/database/customer_database.dart';
+import 'package:xyz_project_01/vm/database/employee_database.dart';
 
-class CRegist extends StatefulWidget {
-  const CRegist({super.key});
+class ERegist extends StatefulWidget {
+  const ERegist({super.key});
 
   @override
-  State<CRegist> createState() => _CRegistState();
+  State<ERegist> createState() => _ERegistState();
 }
 
-class _CRegistState extends State<CRegist> {
+class _ERegistState extends State<ERegist> {
   //Property
   late TextEditingController idController;
   late TextEditingController pwController;
   late TextEditingController nameController;
   late TextEditingController phoneController;
-  late TextEditingController addressController;
-  late CustomerDatabase customer;
+  late EmployeeDatabase customer;
+
   late bool _isIdChecked;
   String _checkedEmail = '';
+
+  final Map<String, int> rankMap = {
+    '사원': 1,
+    '팀장': 2,
+    '이사': 3,
+    '임원': 4,
+  };
+
+  String? selectedRank;
+
   Message message = Message();
 
   @override
@@ -31,20 +41,20 @@ class _CRegistState extends State<CRegist> {
     pwController = TextEditingController();
     nameController = TextEditingController();
     phoneController = TextEditingController();
-    addressController = TextEditingController();
-    customer = CustomerDatabase();
+    customer = EmployeeDatabase();
     _isIdChecked = false;
     _checkedEmail = '';
+
     idController.addListener(_onIdChanged);
   }
 
   @override
   void dispose() {
+    idController.removeListener(_onIdChanged);
     idController.dispose();
     pwController.dispose();
     nameController.dispose();
     phoneController.dispose();
-    addressController.dispose();
     super.dispose();
   }
 
@@ -93,7 +103,6 @@ class _CRegistState extends State<CRegist> {
                 decoration: InputDecoration(
                   labelText: '비밀번호',
                 ),
-                obscureText: false,
               ),
               TextField(
                 controller: nameController,
@@ -107,12 +116,31 @@ class _CRegistState extends State<CRegist> {
                   labelText: '전화번호',
                 ),
               ),
-              TextField(
-                controller: addressController,
-                decoration: InputDecoration(
-                  labelText: '주소',
-                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                 Text('직급:  '),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(30, 0, 0, 0),
+                    child: DropdownButton<String>(
+                      hint: Text('선택'),
+                      value: selectedRank,
+                      items: rankMap.keys.map((rankName) {
+                        return DropdownMenuItem(
+                          value: rankName,
+                          child: Text(rankName),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          selectedRank = value;
+                        });
+                      },
+                    ),
+                  ),
+                ],
               ),
+
               Padding(
                 padding: const EdgeInsets.fromLTRB(
                   0,
@@ -127,7 +155,7 @@ class _CRegistState extends State<CRegist> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.black,
                     foregroundColor: Colors.white,
-                    minimumSize: Size(350, 50),
+                    minimumSize: const Size(350, 50),
                   ),
                   child: Text('회원가입'),
                 ),
@@ -144,21 +172,31 @@ class _CRegistState extends State<CRegist> {
     if (result != 0) {
       return;
     }
-
+    
     if (!_isIdChecked) {
       message.snackBar('중복확인', '이메일 중복확인을 해주세요');
       return;
     }
 
-    var userlist = Customer(
-      cemail: idController.text.trim(),
-      cpw: pwController.text.trim(),
-      cname: nameController.text.trim(),
-      cphone: phoneController.text.trim(),
-      caddress: addressController.text,
+    if (selectedRank == null) {
+      message.snackBar('직급', '직급을 선택하세요');
+      return;
+    }
+
+    final erankValue = rankMap[selectedRank]!;
+
+    var userlist = Employee(
+      eemail: idController.text.trim(),
+      epw: pwController.text.trim(),
+      ename: nameController.text.trim(),
+      ephone: phoneController.text.trim(),
+      erank: erankValue,
+      erole: 1,
+      epower: 1,
+      workplace: 1,
     );
 
-    int insertResult = await customer.insertCustomer(userlist);
+    int insertResult = await customer.insertEmployee(userlist);
 
     if (insertResult == 0) {
       message.snackBar('DB 오류', 'Data저장시 문제가 발생했습니다');
@@ -171,7 +209,7 @@ class _CRegistState extends State<CRegist> {
         actions: [
           TextButton(
             onPressed: () {
-              Get.offAll(CLogin());
+              Get.offAll(const ELogin());
             },
             style: TextButton.styleFrom(
                 foregroundColor: Colors.black,
@@ -209,7 +247,6 @@ class _CRegistState extends State<CRegist> {
     }
   }
 
-  
   // 아이디 수정 시 다시 체크
   void _onIdChanged() {
     final current = idController.text.trim();
@@ -220,7 +257,6 @@ class _CRegistState extends State<CRegist> {
     }
   }
 
-  // 입력 체크
   int checkData(){
     final List<Map<String, dynamic>> checks = [
       {
@@ -243,11 +279,6 @@ class _CRegistState extends State<CRegist> {
         'title': '전화번호',
         'message': '전화번호를 입력 하세요',
       },
-      {
-        'condition': addressController.text.isEmpty,
-        'title': '주소',
-        'message': '주소를 입력 하세요',
-      },
     ];
 
     int result = 0;
@@ -260,5 +291,4 @@ class _CRegistState extends State<CRegist> {
     }
     return result;
   }
-
 } // class

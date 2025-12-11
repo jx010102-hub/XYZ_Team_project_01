@@ -1,130 +1,88 @@
-// lib/vm/database/example_data.dart
+import 'package:sqflite/sqflite.dart';
+import 'package:xyz_project_01/model/employee.dart';
+import 'package:xyz_project_01/vm/database/database_handler.dart';
 
-class ExampleData {
-  // 1. 고객 (customer) 예시 데이터 (임의의 데이터)
-  static final List<Map<String, dynamic>> customers = [
-    // {
-    //   'cemail': 'user1@example.com',
-    //   'cpw': '1234',
-    //   'cphone': '010-1111-1111',
-    //   'cname': '김철수',
-    //   'caddress': '서울시 강남구',
-    // },
-    // {
-    //   'cemail': 'user2@example.com',
-    //   'cpw': '1234',
-    //   'cphone': '010-2222-2222',
-    //   'cname': '이영희',
-    //   'caddress': '경기도 성남시',
-    // },
-  ];
+class EmployeeDatabase {
+  final handler = DatabaseHandler();
 
-  // 2. 상품 (goods) 예시 데이터
-  static final List<Map<String, dynamic>> goods = _generateGoodsData();
-
-  // 3. 지점 (branch) 예시 데이터 (임의의 데이터)
-  static final List<Map<String, dynamic>> branches = [
-    // {'bid': 1001, 'blat': 37.514, 'blng': 127.039, 'bname': '강남 XYZ 본점'},
-    // {'bid': 1002, 'blat': 37.566, 'blng': 126.978, 'bname': '명동 XYZ 지점'},
-  ];
-
-  // 4. 직원 (employee) 예시 데이터 (임의의 데이터)
-  static final List<Map<String, dynamic>> employees = [
-    // {
-    //   'eemail': 'admin@xyz.com',
-    //   'epw': '1234',
-    //   'ephone': '010-9999-9999',
-    //   'erank': 1,
-    //   'erole': 1,
-    //   'epower': 100,
-    //   'workplace': 1001,
-    //   'ebid': 1001
-    // },
-  ];
-
-  // 5. 공급업체 (supplier) 예시 데이터 (임의의 데이터)
-  static final List<Map<String, dynamic>> suppliers = [
-    // {'sid': 1, 'sname': '나이키 코리아'},
-    // {'sid': 2, 'sname': '아디다스 코리아'},
-  ];
-
-  // (purchase, refund, approval, orders 데이터는 일단 비워둡니다.)
-  static final List<Map<String, dynamic>> purchases = [];
-  static final List<Map<String, dynamic>> refunds = [];
-  static final List<Map<String, dynamic>> approvals = [];
-  static final List<Map<String, dynamic>> orders = [];
-
-
-  // ⭐️⭐️⭐️ 요청 조건에 따라 260개의 상품 옵션을 생성하는 함수 ⭐️⭐️⭐️
-  static List<Map<String, dynamic>> _generateGoodsData() {
-    final List<Map<String, dynamic>> list = [];
-    const int gSumAmount = 100; // 고정값
-
-    // 1. 변동값 (사이즈 및 색상)
-    final List<String> sizes = [
-      '230', '235', '240', '245', '250',
-      '255', '260', '265', '270', '275',
-      '280', '285', '290'
-    ]; // 총 13개
-    final List<String> colors = ['흰색', '검정색', '시그니쳐 색상', '회색']; // 총 4개
-
-    // 2. 고정값 (5가지 상품 정보와 이미지)
-    final List<Map<String, dynamic>> baseProducts = [
-      {
-        'gname': '에어맥스',
-        'gengname': 'Air Max',
-        'gcategory': '러닝화',
-        'main': 'main1.png', 'top': 'top1.png', 'back': 'back1.png', 'side': 'side1.png'
-      },
-      {
-        'gname': '에어포스',
-        'gengname': 'Air Force',
-        'gcategory': '농구화',
-        'main': 'main2.png', 'top': 'top2.png', 'back': 'back2.png', 'side': 'side2.png'
-      },
-      {
-        'gname': '파워레인저',
-        'gengname': 'Power Rangers',
-        'gcategory': '운동화',
-        'main': 'main3.png', 'top': 'top3.png', 'back': 'back3.png', 'side': 'side3.png'
-      },
-      {
-        'gname': '가젤',
-        'gengname': 'Gazelle',
-        'gcategory': '스니커즈',
-        'main': 'main4.png', 'top': 'top4.png', 'back': 'back4.png', 'side': 'side4.png'
-      },
-      {
-        'gname': '슈퍼스타',
-        'gengname': 'Superstar',
-        'gcategory': '스니커즈',
-        'main': 'main5.png', 'top': 'top5.png', 'back': 'back5.png', 'side': 'side5.png'
-      },
-    ];
-
-    const String imagePathBase = 'images/';
-
-    // 3. 옵션 조합 생성 (총 5 * 13 * 4 = 260개)
-    for (final product in baseProducts) {
-      for (var size in sizes) {
-        for (var color in colors) {
-          list.add({
-            'gsumamount': gSumAmount,
-            'gname': product['gname'],
-            'gengname': product['gengname'],
-            'gsize': size,
-            'gcolor': color,
-            'gcategory': product['gcategory'],
-            // SeedData에서 이미지 파일을 로드하기 위한 경로 정보
-            'mainimagePath': '$imagePathBase${product['main']}',
-            'topimagePath': '$imagePathBase${product['top']}',
-            'backimagePath': '$imagePathBase${product['back']}',
-            'sideimagePath': '$imagePathBase${product['side']}',
-          });
-        }
-      }
-    }
-    
-    return list;
+  // 검색
+  Future<List<Employee>> queryEmployee() async{
+    final Database db = await handler.initializeDB();
+    final List<Map<String, Object?>> queryResults = await db.rawQuery(
+      'select * from employee'
+    );
+    return queryResults.map((e) => Employee.fromMap(e)).toList();
   }
+
+  // 이메일 중복 체크
+  Future<int> idCheck(String id) async {
+    final db = await handler.initializeDB();
+    var result = await db.rawQuery(
+      """
+      select count(*) as count
+      from employee
+      where eemail = ?
+      """,
+      [id],
+    );
+    return Sqflite.firstIntValue(result) ?? 0;
+  }
+
+  // 로그인
+  Future<bool> loginCheck(String id, String pw) async {
+    final Database db = await handler.initializeDB();
+    final List<Map<String, dynamic>> result = await db.rawQuery(
+      """
+      select * from employee
+      where eemail = ? and epw = ?
+      """,
+      [id, pw]
+    );
+    return result.isNotEmpty;
+  }
+
+  // 입력
+  Future<int> insertEmployee(Employee employee) async{
+    int result = 0;
+    final Database db = await handler.initializeDB();
+    result = await db.rawInsert(
+      """
+        insert into employee
+        (eemail, epw, ename, ephone, erank, erole, epower, workplace, ebid)
+        values
+        (?,?,?,?,?,?,?,?,?)
+      """,
+      [employee.eemail, employee.epw, employee.ename, employee.ephone, employee.erank, employee.erole, employee.epower, employee.workplace, employee.ebid]
+    );
+    return result;
+  }
+
+  // 수정
+  Future<int> updateEmployee(Employee employee) async{
+    int result = 0;
+    final Database db = await handler.initializeDB();
+    result = await db.rawUpdate(
+      """
+      update employee
+      set epw = ?, ename = ?, ephone = ?
+      where eseq = ?
+      """,
+      [employee.epw, employee.ename, employee.ephone, employee.eseq]
+    );
+    return result;
+  }
+
+  // 삭제
+  Future<void> deleteEmployee(int eseq) async{
+    final Database db = await handler.initializeDB();
+    await db.rawUpdate(
+      """
+        delete from employee
+        where eseq = ?
+      """,
+      [eseq]
+    );
+  }
+
+  
 }

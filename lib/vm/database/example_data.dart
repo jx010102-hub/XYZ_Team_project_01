@@ -33,7 +33,9 @@ class ExampleData {
     // {
     //   'eemail': 'admin@xyz.com',
     //   'epw': '1234',
-    //   'ephone': '010-9999-9999',
+
+    //   'ename': '김상준',
+    //   'ephone': '010-3333-3333',
     //   'erank': 1,
     //   'erole': 1,
     //   'epower': 100,
