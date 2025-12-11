@@ -18,7 +18,7 @@ class SeedData {
 
     // 예시 데이터 입력을 위한 코드
 
-    // 여기서 기준이란, 중복된 예시 데이터가 또 들어가는지 판단하는 기준
+    // 여기서 기준: 중복된 예시 데이터가 또 들어가는지 판단하는 기준
 
     // 1) customer (기준: cemail)
     for (final row in ExampleData.customers) {
@@ -33,8 +33,6 @@ class SeedData {
     }
 
     // 2) goods (기준: gname + gsize + gcolor)
-
-    // 🔥 공통 이미지 4개를 한 번만 로드해서 재사용
     Uint8List? commonMainImage;
     Uint8List? commonTopImage;
     Uint8List? commonBackImage;

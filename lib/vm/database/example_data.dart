@@ -42,10 +42,11 @@ class ExampleData {
   }) {
     final List<Map<String, dynamic>> result = [];
 
-    const mainPath = '>>> 파일 경로 <<<';
-    const topPath  = '>>> 파일 경로 <<<';
-    const backPath = '>>> 파일 경로 <<<';
-    const sidePath = '>>> 파일 경로 <<<';
+    // 각 이미지 파일 경로
+    const mainPath = 'images/파일이름.png';
+    const topPath  = 'images/파일이름.png';
+    const backPath = 'images/파일이름.png';
+    const sidePath = 'images/파일이름.png';
 
     for (final size in gsize) {
       for (final color in gcolor) {

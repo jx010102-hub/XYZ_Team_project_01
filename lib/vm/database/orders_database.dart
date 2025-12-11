@@ -56,6 +56,4 @@ class OrdersDatabase {
       [oseq]
     );
   }
-
-  
 }

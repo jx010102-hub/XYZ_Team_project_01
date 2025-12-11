@@ -56,5 +56,4 @@ class ApprovalDatabase {
       [aseq]
     );
   }
-
 }
