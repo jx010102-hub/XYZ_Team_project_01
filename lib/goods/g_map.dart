@@ -1,14 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart'; 
 import 'package:latlong2/latlong.dart'; 
-import 'package:sqflite/sqflite.dart'; // DB 로직을 위한 import
 
 // ⭐️ DB 연동을 위한 Import (프로젝트 구조에 맞게 경로를 수정해야 합니다!)
-import 'package:xyz_project_01/model/branch.dart'; 
+import 'package:xyz_project_01/model/branch.dart';
 import 'package:xyz_project_01/vm/database/branch_database.dart'; 
-
-// Branch 모델 클래스는 별도의 'branch.dart'에 있다고 가정합니다.
-// BranchDatabase 클래스는 별도의 'branch_database.dart'에 있다고 가정합니다.
 
 class GMap extends StatefulWidget {
   const GMap({super.key});
@@ -31,10 +27,10 @@ class _GMapState extends State<GMap> {
   // ⭐️ DB 핸들러 인스턴스
   final BranchDatabase _branchDB = BranchDatabase(); 
   
-  // ⭐️ 화면에 표시할 매장 목록 (DB 로드 전까지는 비어있음)
+  // ⭐️ 화면에 표시할 매장 목록
   List<Map<String, dynamic>> allStores = []; 
   
-  // --- 데이터 정의 ---
+  // --- 기타 데이터 정의 ---
   final List<String> seoulDistricts = [
     '강남구', '강동구', '강북구', '강서구', '관악구', '광진구', '구로구', 
     '금천구', '노원구', '도봉구', '동대문구', '동작구', '마포구', '서대문구', 
@@ -74,7 +70,7 @@ class _GMapState extends State<GMap> {
   
   // ⭐️ 핵심 함수: 앱 실행 시 DB에 더미 데이터 삽입 및 로드
   void _initDatabaseAndLoadStores() async {
-    // 1. 초기 더미 데이터 (DB에 삽입될 데이터와 화면에 표시될 상세 정보를 모두 포함)
+    // 1. 초기 더미 데이터 정의
     List<Map<String, dynamic>> initialData = [
       {'bid': 1, 'name': '강남로데오점(XYZ 슈퍼)', 'district': '강남구', 'address': '서울특별시 강남구 논현로102길 3', 'image': 'images/xyz_logo.png', 'lat': 37.5255, 'lng': 127.0396}, 
       {'bid': 2, 'name': '서초구 강남대로점(XYZ 슈퍼)', 'district': '서초구', 'address': '서울특별시 서초구 강남대로 78길', 'image': 'images/xyz_logo.png', 'lat': 37.4940, 'lng': 127.0230}, 
@@ -82,6 +78,7 @@ class _GMapState extends State<GMap> {
       {'bid': 4, 'name': '논현역점(XYZ 슈퍼)', 'district': '강남구', 'address': '서울특별시 강남구 학동로 202', 'image': 'images/xyz_logo.png', 'lat': 37.5110, 'lng': 127.0215}, 
       {'bid': 5, 'name': '신사 가로수길점(XYZ 슈퍼)', 'district': '강남구', 'address': '서울특별시 강남구 강남대로152길 34', 'image': 'images/xyz_logo.png', 'lat': 37.5215, 'lng': 127.0219},
       {'bid': 6, 'name': '양재역점(XYZ 슈퍼)', 'district': '서초구', 'address': '서울특별시 서초구 남부순환로 2640', 'image': 'images/xyz_logo.png', 'lat': 37.4851, 'lng': 127.0347},
+      
       {'bid': 7, 'name': '강동 천호점(XYZ 슈퍼)', 'district': '강동구', 'address': '서울특별시 강동구 천호대로 1052', 'image': 'images/xyz_logo.png', 'lat': 37.5381, 'lng': 127.1265},
       {'bid': 8, 'name': '강북 미아점(XYZ 슈퍼)', 'district': '강북구', 'address': '서울특별시 강북구 도봉로 349', 'image': 'images/xyz_logo.png', 'lat': 37.6140, 'lng': 127.0315},
       {'bid': 9, 'name': '강서 마곡점(XYZ 슈퍼)', 'district': '강서구', 'address': '서울특별시 강서구 마곡중앙8로 149', 'image': 'images/xyz_logo.png', 'lat': 37.5615, 'lng': 126.8335},
@@ -115,8 +112,8 @@ class _GMapState extends State<GMap> {
       bname: e['name'] as String,
     )).toList();
     
-    // 3. DB에 등록 (insertAllBranches는 BranchDatabase.dart에 정의되어야 함)
-    await _branchDB.insertAllBranches(branchesToInsert);
+    // 3. ⭐️ 테이블이 비어있을 때만 데이터를 삽입하는 함수 호출
+    await _branchDB.initializeBranchesIfEmpty(branchesToInsert);
     
     // 4. 화면에 표시할 리스트 업데이트 (mounted 체크 필수!)
     if (mounted) { 
@@ -147,12 +144,12 @@ class _GMapState extends State<GMap> {
     });
   }
 
-  // ⭐️ 오류 수정: 매장 이름 인자 제거 (3개 -> 2개)
+  // ⭐️ 오류 수정: 2개 인자만 받도록 변경
   void _selectStoreAndMoveMap(double lat, double lng) {
     final LatLng selectedLocation = LatLng(lat, lng);
     
     setState(() {
-      _currentTab = 1; // 탭을 지도로 변경
+      _currentTab = 1; 
     });
     _mapController.move(selectedLocation, 14.0); 
   }
@@ -197,6 +194,28 @@ class _GMapState extends State<GMap> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+            appBar: AppBar(
+        title: Image.asset(
+          'images/xyz_logo.png', // 이미지 경로
+          height: 70,
+          width: 70,
+          fit: BoxFit.contain,
+        ),
+        actions: [
+          IconButton(
+            onPressed: () {
+              //
+            },
+            icon: Icon(Icons.search),
+          ),
+          IconButton(
+            onPressed: () {
+              //
+            },
+            icon: Icon(Icons.notifications),
+          ),
+        ],
+      ),
       body: SafeArea(
         child: Column(
           children: [
