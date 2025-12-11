@@ -30,7 +30,11 @@ class DatabaseHandler {
             gengname text,
             gsize text,
             gcolor text,
-            gcategory text
+            gcategory text,
+            mainimage blob,
+            topimage blob,
+            backimage blob,
+            sideimage blob
           )
           """
         );

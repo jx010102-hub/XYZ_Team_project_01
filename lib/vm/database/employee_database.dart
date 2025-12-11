@@ -30,32 +30,32 @@ class EmployeeDatabase {
     return result;
   }
 
-  // // 수정
-  // Future<int> updateApproval(Approval approval) async{
-  //   int result = 0;
-  //   final Database db = await handler.initializeDB();
-  //   result = await db.rawUpdate(
-  //     """
-  //     update approval
-  //     set astatus = ?, adate = ?, aoseq = ?
-  //     where aseq = ?
-  //     """,
-  //     [approval.astatus, approval.adate, approval.aoseq, approval.aseq]
-  //   );
-  //   return result;
-  // }
+  // 수정
+  Future<int> updateEmployee(Employee employee) async{
+    int result = 0;
+    final Database db = await handler.initializeDB();
+    result = await db.rawUpdate(
+      """
+      update employee
+      set epw = ?, ephone = ?
+      where eseq = ?
+      """,
+      [employee.epw, employee.ephone, employee.eseq]
+    );
+    return result;
+  }
 
-  // // 삭제
-  // Future<void> deleteApproval(int aseq) async{
-  //   final Database db = await handler.initializeDB();
-  //   await db.rawUpdate(
-  //     """
-  //       delete from approval
-  //       where aseq = ?
-  //     """,
-  //     [aseq]
-  //   );
-  // }
+  // 삭제
+  Future<void> deleteEmployee(int eseq) async{
+    final Database db = await handler.initializeDB();
+    await db.rawUpdate(
+      """
+        delete from employee
+        where eseq = ?
+      """,
+      [eseq]
+    );
+  }
 
   
 }
