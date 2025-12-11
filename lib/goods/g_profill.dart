@@ -117,7 +117,12 @@ class _GProfillState extends State<GProfill> {
             _buildSettingItem(
               title: '주문내역',
               onTap: () {
-                Get.to(() => const GoodsProfillBuyPage());
+                // ⭐️ GoodsProfillBuyPage로 이동 시 userid 전달
+                Get.to(
+                  () => GoodsProfillBuyPage(
+                    userId: widget.userid, // GProfill이 받은 userid를 전달
+                  ),
+                );
               },
             ),
             const Divider(

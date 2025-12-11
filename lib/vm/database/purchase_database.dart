@@ -66,4 +66,20 @@ class PurchaseDatabase {
       [pseq]
     );
   }
+
+  // lib/vm/database/purchase_database.dart 파일 내용 (PurchaseDatabase 클래스 내부)
+
+// ... (기존 queryPurchase, insertPurchase 등 함수 유지)
+
+  // ⭐️ 특정 사용자 ID의 구매 내역 조회
+  Future<List<Purchase>> queryPurchaseByUserId(String userId) async{
+    final Database db = await handler.initializeDB();
+    final List<Map<String, Object?>> queryResults = await db.rawQuery(
+      'select * from purchase where userid = ? order by pdate desc',
+      [userId] // 현재 로그인된 사용자 ID를 조건으로 사용
+    );
+    return queryResults.map((e) => Purchase.fromMap(e)).toList();
+  }
+
+// ...
 }
