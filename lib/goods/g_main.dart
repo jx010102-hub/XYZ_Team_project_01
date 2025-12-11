@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:xyz_project_01/insert/goods_detail_page.dart';
+import 'package:xyz_project_01/model/goods.dart';
 
 class GMain extends StatefulWidget {
   const GMain({super.key});
@@ -231,84 +234,101 @@ class _GMainState extends State<GMain> {
 
   // _GMainState 클래스 내부
   Widget _buildShoeCard(String imagePath) {
-    return Container(
-      margin: const EdgeInsets.symmetric(
-        horizontal: 10,
-      ), // 카드 간 간격
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 신발 이미지 영역
-          Expanded(
-            child: ClipRRect(
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(20),
-              ),
-              child: Image.asset(
-                imagePath, // 전달받은 이미지 경로 사용
-                width: double.infinity,
-                fit: BoxFit.cover,
-                // 이미지 로딩 오류 발생 시 간단한 대체 화면
-                errorBuilder: (context, error, stackTrace) {
-                  return const Center(
-                    child: Icon(
-                      Icons.error,
-                      color: Colors.red,
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
+    // 상품 상세 페이지로 전달할 임시 Goods 객체 생성 (동일)
+    final Goods dummyGoods = Goods(
+      gsumamount: 50,
+      gname: "오늘의 추천 특별 한정판 신발",
+      gengname: "Today's Recommended Exclusive Shoe",
+      gsize: "270",
+      gcolor: "Black",
+      gcategory: "스니커즈",
+    );
 
-          // 임시 텍스트 정보 영역 (이미지 경로만 받으므로 임시로 넣었습니다)
-          const Padding(
-            padding: EdgeInsets.all(15.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "BEST BRAND",
-                  style: TextStyle(
-                    color: Colors.grey,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                SizedBox(height: 5),
-                Text(
-                  "Best Recommended Shoe",
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                SizedBox(height: 5),
-                Text(
-                  "159,000원",
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.blueAccent,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
+    return GestureDetector(
+      onTap: () {
+        Get.to(GoodsDetailPage(goods: dummyGoods));
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(
+          horizontal: 10,
+        ), // 카드 간 간격
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, 5),
             ),
-          ),
-        ],
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 신발 이미지 영역
+            Expanded(
+              child: ClipRRect(
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(20),
+                ),
+                child: Image.asset(
+                  imagePath, // 전달받은 이미지 경로 사용
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  // 이미지 로딩 오류 발생 시 간단한 대체 화면
+                  errorBuilder:
+                      (context, error, stackTrace) {
+                        return const Center(
+                          child: Icon(
+                            Icons.error,
+                            color: Colors.red,
+                          ),
+                        );
+                      },
+                ),
+              ),
+            ),
+
+            // 임시 텍스트 정보 영역 (이미지 경로만 받으므로 임시로 넣었습니다)
+            const Padding(
+              padding: EdgeInsets.all(15.0),
+              child: Column(
+                crossAxisAlignment:
+                    CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "BEST BRAND",
+                    style: TextStyle(
+                      color: Colors.grey,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 5),
+                  Text(
+                    "Best Recommended Shoe",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  SizedBox(height: 5),
+                  Text(
+                    "159,000원",
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.blueAccent,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -324,66 +344,82 @@ class _GMainState extends State<GMain> {
     const double cardWidth = 150; // 카드의 너비
     const double imageBoxHeight = 120; // 이미지 영역의 높이
 
-    return Container(
-      width: cardWidth,
-      margin: const EdgeInsets.only(right: 15), // 카드 간 간격
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 1. 이미지 박스 (슬라이드 박스 높이 320의 반 정도인 120으로 설정)
-          Container(
-            height: imageBoxHeight,
-            width: cardWidth,
-            decoration: BoxDecoration(
-              color: Colors.grey[200], // 배경색을 살짝 넣어줍니다.
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: Image.asset(
-                imagePath,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return const Center(
-                    child: Icon(
-                      Icons.shopping_bag,
-                      color: Colors.grey,
-                    ),
-                  );
-                },
+    // 상품 상세 페이지로 전달할 임시 Goods 객체 생성 (동일)
+    final Goods dummyGoods = Goods(
+      gsumamount: 30,
+      gname: name,
+      gengname: brand,
+      gsize: "250",
+      gcolor: "Navy",
+      gcategory: "러닝화",
+    );
+
+    return GestureDetector(
+      onTap: () {
+        Get.to(GoodsDetailPage(goods: dummyGoods));
+      },
+      child: Container(
+        width: cardWidth,
+        margin: const EdgeInsets.only(right: 15), // 카드 간 간격
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 1. 이미지 박스 (슬라이드 박스 높이 320의 반 정도인 120으로 설정)
+            Container(
+              height: imageBoxHeight,
+              width: cardWidth,
+              decoration: BoxDecoration(
+                color: Colors.grey[200], // 배경색을 살짝 넣어줍니다.
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: Image.asset(
+                  imagePath,
+                  fit: BoxFit.cover,
+                  errorBuilder:
+                      (context, error, stackTrace) {
+                        return const Center(
+                          child: Icon(
+                            Icons.shopping_bag,
+                            color: Colors.grey,
+                          ),
+                        );
+                      },
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 8),
+            const SizedBox(height: 8),
 
-          // 2. 텍스트 정보
-          Text(
-            brand, // '스케쳐스'
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: Colors.black,
+            // 2. 텍스트 정보
+            Text(
+              brand, // '스케쳐스'
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+              ),
             ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            name, // '고 런 엘리베이트'
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[600],
+            const SizedBox(height: 2),
+            Text(
+              name, // '고 런 엘리베이트'
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[600],
+              ),
+              overflow: TextOverflow.ellipsis,
             ),
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 5),
-          Text(
-            price, // '119,000원'
-            style: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-              color: Colors.blueAccent,
+            const SizedBox(height: 5),
+            Text(
+              price, // '119,000원'
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: Colors.blueAccent,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
