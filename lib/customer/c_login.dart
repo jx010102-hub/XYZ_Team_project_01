@@ -3,7 +3,7 @@ import 'package:get/get.dart';
 import 'package:xyz_project_01/customer/c_find_id.dart';
 import 'package:xyz_project_01/customer/c_find_pw.dart';
 import 'package:xyz_project_01/customer/c_regist.dart';
-import 'package:xyz_project_01/goods/g_main.dart';
+import 'package:xyz_project_01/goods/g_tabbar.dart';
 
 class CLogin extends StatefulWidget {
   const CLogin({super.key});
@@ -57,7 +57,7 @@ class _CLoginState extends State<CLogin> {
                 padding: const EdgeInsets.fromLTRB(0, 30, 0, 30),
                 child: ElevatedButton(
                   onPressed: (){
-                    Get.to(GMain());
+                    Get.to(GTabbar());
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.black,
