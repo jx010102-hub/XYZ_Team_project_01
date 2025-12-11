@@ -9,6 +9,7 @@ class Purchase {    // 주문
   int ppayway;      // 결제수단 (1: 간편결제, 2: 카드결제, 3: 현장결제)
   int ppayamount;   // 결제수량
   double pdiscount; // 할인 (%)
+  String userid;
 
   Purchase(
     {
@@ -20,7 +21,8 @@ class Purchase {    // 주문
       required this.ppayprice,
       required this.ppayway,
       required this.ppayamount,
-      required this.pdiscount
+      required this.pdiscount,
+      required this.userid
     }
   );
 
@@ -33,6 +35,7 @@ class Purchase {    // 주문
     ppayprice = res['ppayprice'],
     ppayway = res['ppayway'],
     ppayamount = res['ppayamount'],
-    pdiscount = res['pdiscount'];
+    pdiscount = res['pdiscount'],
+    userid = res['userid'];
 
 }

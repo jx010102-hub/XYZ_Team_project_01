@@ -151,29 +151,33 @@ class GoodsDatabase {
 
   // ⭐️⭐️⭐️ 상품 재고(gqty)를 업데이트하는 함수 ⭐️⭐️⭐️
   // quantityChange는 재고 증가(+값) 또는 감소(-값)입니다.
-  Future<int> updateGoodsQuantity({required int gseq, required int quantityChange}) async{
+  // 총 재고량(gsumamount)을 증감하는 함수로 수정
+  Future<int> updateGoodsQuantity({
+    required int gseq,
+    required int quantityChange,
+  }) async {
     int result = 0;
     final Database db = await handler.initializeDB();
-    
-    // 현재 재고를 가져와서 계산
+
+    // 현재 재고 가져오기 (gsumamount)
     final List<Map<String, Object?>> query = await db.rawQuery(
-      'select gqty from goods where gseq = ?', [gseq]
+      'select gsumamount from goods where gseq = ?',
+      [gseq],
     );
 
     if (query.isNotEmpty) {
-      int currentQty = query.first['gqty'] as int;
+      int currentQty = query.first['gsumamount'] as int;
       int newQty = currentQty + quantityChange;
 
       if (newQty < 0) {
-        // 재고 부족 시 0으로 설정
         newQty = 0;
         print("경고: 재고가 부족하여 0으로 설정되었습니다.");
       }
 
-      // 재고 업데이트
+      // gsumamount 업데이트
       result = await db.rawUpdate(
-        'update goods set gqty = ? where gseq = ?',
-        [newQty, gseq]
+        'update goods set gsumamount = ? where gseq = ?',
+        [newQty, gseq],
       );
     }
     return result;

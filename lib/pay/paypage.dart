@@ -1,7 +1,9 @@
 // lib/pay/paypage.dart 파일 전체 내용
 
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:xyz_project_01/goods/g_tabbar.dart';
 import 'package:xyz_project_01/model/goods.dart'; // Goods 모델 경로 확인
 import 'package:xyz_project_01/model/purchase.dart'; // Purchase 모델 경로 확인
 import 'package:xyz_project_01/vm/database/purchase_database.dart'; // PurchaseDatabase 경로 확인
@@ -12,6 +14,7 @@ class PayPage extends StatefulWidget {
   final String selectedSize;
   final String selectedColor;
   final int quantity;
+  final String userid;
 
   const PayPage({
     super.key,
@@ -19,6 +22,7 @@ class PayPage extends StatefulWidget {
     required this.selectedSize,
     required this.selectedColor,
     required this.quantity,
+    required this.userid
   });
 
   @override
@@ -363,6 +367,7 @@ class _PayPageState extends State<PayPage> {
         ppayway: payWay,
         ppayamount: widget.quantity, // 결제 수량
         pdiscount: 0.0, // 할인율 0% 가정
+        userid: widget.userid
       );
 
       // 4. DB 핸들러 호출
@@ -378,16 +383,31 @@ class _PayPageState extends State<PayPage> {
           gseq: widget.goods.gseq!, 
           quantityChange: -widget.quantity, // 구매 수량만큼 차감
         );
-
         if (purchaseResult > 0 && goodsResult > 0) {
+          setState(() {
+            widget.goods.gsumamount -= widget.quantity; // 메모리 상 재고도 직접 차감
+          });
           // 성공 메시지
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('✅ 결제가 완료되었으며 주문 정보가 저장되었습니다.')),
-          );
-          
-          // 메인 화면으로 돌아가기
-          Navigator.popUntil(context, (route) => route.isFirst); 
-
+          Get.defaultDialog(
+          title: '성공',
+          middleText: '결제가 완료되었습니다.',
+          backgroundColor: const Color.fromARGB(255, 193, 197, 201),
+          barrierDismissible: false,
+          actions: [
+            TextButton(
+              onPressed: () {
+                Get.offAll(GTabbar(userid: widget.userid,));
+              },
+              style: TextButton.styleFrom(
+                  foregroundColor: Colors.black,
+              ),
+              child: Text('OK'),
+            ),
+          ],
+        );
+        print('${widget.userid}님 결제 완료');
+        print('${widget.quantity}개 차감');
+        print('남은 재고 ${widget.goods.gsumamount}개');
         } else {
           // DB 저장 실패 메시지
           ScaffoldMessenger.of(context).showSnackBar(

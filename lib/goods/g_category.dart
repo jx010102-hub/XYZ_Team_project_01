@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
 class GCategory extends StatefulWidget {
-  const GCategory({super.key});
+  final String userid;
+  const GCategory({super.key, required this.userid});
 
   @override
   State<GCategory> createState() => _GCategoryState();

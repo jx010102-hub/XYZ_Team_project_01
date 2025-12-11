@@ -7,7 +7,8 @@ import 'package:xyz_project_01/model/branch.dart';
 import 'package:xyz_project_01/vm/database/branch_database.dart'; 
 
 class GMap extends StatefulWidget {
-  const GMap({super.key});
+  final String userid;
+  const GMap({super.key, required this.userid});
 
   @override
   State<GMap> createState() => _GMapState();

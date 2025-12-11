@@ -82,7 +82,8 @@ class DatabaseHandler {
             ppayprice real,
             ppayway integer,
             ppayamount integer,
-            pdiscount real
+            pdiscount real,
+            userid text
           )
           """
         );

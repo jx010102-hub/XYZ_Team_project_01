@@ -3,7 +3,8 @@ import 'package:get/get.dart';
 import 'package:xyz_project_01/insert/goods_profill_buy_page.dart';
 
 class GProfill extends StatefulWidget {
-  const GProfill({super.key});
+  final String userid;
+  const GProfill({super.key, required this.userid});
 
   @override
   State<GProfill> createState() => _GProfillState();

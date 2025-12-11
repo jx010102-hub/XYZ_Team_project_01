@@ -21,15 +21,15 @@ class PurchaseDatabase {
     result = await db.rawInsert(
       """
         insert into purchase
-        (pstatus, pdate, pamount, ppaydate, ppayprice, ppayway, ppayamount, pdiscount)
+        (pstatus, pdate, pamount, ppaydate, ppayprice, ppayway, ppayamount, pdiscount, userid)
         values
-        (?,?,?,?,?,?,?,?)
+        (?,?,?,?,?,?,?,?,?)
       """,
       [
         purchase.pstatus, purchase.pdate,
         purchase.pamount, purchase.ppaydate,
         purchase.ppayprice, purchase.ppayway,
-        purchase.ppayamount, purchase.pdiscount
+        purchase.ppayamount, purchase.pdiscount, purchase.userid
       ]
     );
     return result;

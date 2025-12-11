@@ -10,8 +10,9 @@ import 'dart:typed_data'; // Uint8List 사용
 
 class GoodsDetailPage extends StatefulWidget {
   final Goods goods;
+  final String userid;
 
-  const GoodsDetailPage({super.key, required this.goods});
+  const GoodsDetailPage({super.key, required this.goods, required this.userid});
 
   @override
   State<GoodsDetailPage> createState() => _GoodsDetailPageState();
@@ -206,7 +207,7 @@ class _GoodsDetailPageState extends State<GoodsDetailPage> {
                 GestureDetector(
                   onTap: () {
                     // GoodsInfoPage로 이동 시 현재 Goods 객체를 넘겨 상세 정보 표시 가능
-                    Get.to(GoodsInfoPage(goods : widget.goods)); 
+                    Get.to(GoodsInfoPage(goods: widget.goods)); 
                   },
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
@@ -725,6 +726,7 @@ class _GoodsDetailPageState extends State<GoodsDetailPage> {
                     selectedSize: _selectedSize!, // Null-check 이후에 사용
                     selectedColor: _selectedColor!, // Null-check 이후에 사용
                     quantity: _purchaseQuantity,
+                    userid: widget.userid,
                   ),
                 ),
               );

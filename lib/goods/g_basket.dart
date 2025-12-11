@@ -23,7 +23,8 @@ class BasketItem {
 }
 
 class GBasket extends StatefulWidget {
-  const GBasket({super.key});
+  final String userid;
+  const GBasket({super.key, required this.userid});
 
   @override
   State<GBasket> createState() => _GBasketState();

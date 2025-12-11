@@ -9,7 +9,8 @@ import 'dart:math';
 import 'dart:typed_data'; // Uint8List 사용을 위해 추가
 
 class GMain extends StatefulWidget {
-  const GMain({super.key});
+  final String userid;
+  const GMain({super.key, required this.userid});
 
   @override
   State<GMain> createState() => _GMainState();
@@ -300,7 +301,7 @@ class _GMainState extends State<GMain> {
   Widget _buildShoeCard(Goods goods) {
     return GestureDetector(
       onTap: () {
-        Get.to(GoodsDetailPage(goods: goods));
+        Get.to(GoodsDetailPage(goods: goods, userid: widget.userid,));
       },
       child: Container(
         margin: const EdgeInsets.symmetric(
@@ -392,7 +393,7 @@ class _GMainState extends State<GMain> {
 
     return GestureDetector(
       onTap: () {
-        Get.to(GoodsDetailPage(goods: goods));
+        Get.to(GoodsDetailPage(goods: goods, userid: widget.userid,));
       },
       child: Container(
         width: cardWidth,

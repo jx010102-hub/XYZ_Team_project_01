@@ -17,11 +17,11 @@ class _GTabbarState extends State<GTabbar> {
   int _selectedIndex = 0;
 
   // 탭 내용물 리스트 (중앙 버튼은 리스트에 포함하지 않습니다.)
-  final List<Widget> _widgetOptions = <Widget>[
-    const GMain(), // 0: 홈
-    const GCategory(), // 1: 카테고리
-    const GBasket(), // 2: 장바구니 (FloatingActionButton 다음 위치)
-    const GProfill(), // 3: 프로필
+  List<Widget> get _widgetOptions => <Widget>[
+    GMain(userid: widget.userid), // 0: 홈
+    GCategory(userid: widget.userid), // 1: 카테고리
+    GBasket(userid: widget.userid), // 2: 장바구니 (FloatingActionButton 다음 위치)
+    GProfill(userid: widget.userid), // 3: 프로필
   ];
 
   void _onItemTapped(int index) {
@@ -35,7 +35,7 @@ class _GTabbarState extends State<GTabbar> {
     // Navigator를 사용하여 모달이나 새로운 페이지로 전환할 수 있습니다.
     // 여기서는 간단히 지도 페이지로 이동하는 예시를 사용합니다.
     Navigator.of(context).push(
-      MaterialPageRoute(builder: (context) => const GMap()),
+      MaterialPageRoute(builder: (context) => GMap(userid: widget.userid,)),
     );
   }
 
