@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:xyz_project_01/customer/c_login.dart';
 import 'package:xyz_project_01/insert/goods_detail_page.dart';
 import 'package:xyz_project_01/model/goods.dart';
 import 'package:xyz_project_01/repository/goods_repository.dart';
@@ -16,8 +17,8 @@ class GMain extends StatefulWidget {
   State<GMain> createState() => _GMainState();
 }
 
-class _GMainState extends State<GMain> with AutomaticKeepAliveClientMixin {
-  
+class _GMainState extends State<GMain>
+    with AutomaticKeepAliveClientMixin {
   final PageController _pageController = PageController(
     viewportFraction: 0.85,
   );
@@ -25,8 +26,8 @@ class _GMainState extends State<GMain> with AutomaticKeepAliveClientMixin {
 
   // 대표 상품 리스트
   List<Goods> recommendedGoods = []; // 오늘의 추천 (슬라이더)
-  List<Goods> popularGoods = [];     // 인기 상품 (가로 스크롤)
-  List<Goods> recentGoods = [];      // 최근 본 상품 (가로 스크롤)
+  List<Goods> popularGoods = []; // 인기 상품 (가로 스크롤)
+  List<Goods> recentGoods = []; // 최근 본 상품 (가로 스크롤)
 
   bool isLoading = true;
 
@@ -50,7 +51,8 @@ class _GMainState extends State<GMain> with AutomaticKeepAliveClientMixin {
 
   Future<void> _loadGoodsData() async {
     // 1. 원본 리스트 가져오기
-    final original = await GoodsRepository.getRepresentativeGoods();
+    final original =
+        await GoodsRepository.getRepresentativeGoods();
     final totalCount = original.length;
 
     if (totalCount == 0) {
@@ -64,7 +66,9 @@ class _GMainState extends State<GMain> with AutomaticKeepAliveClientMixin {
     // 오늘의 추천
     temp = List<Goods>.from(original);
     temp.shuffle();
-    recommendedGoods = temp.take(min(4, totalCount)).toList();
+    recommendedGoods = temp
+        .take(min(4, totalCount))
+        .toList();
 
     // 인기 상품
     temp = List<Goods>.from(original);
@@ -78,7 +82,6 @@ class _GMainState extends State<GMain> with AutomaticKeepAliveClientMixin {
 
     setState(() => isLoading = false);
   }
-
 
   @override
   void dispose() {
@@ -94,19 +97,20 @@ class _GMainState extends State<GMain> with AutomaticKeepAliveClientMixin {
     super.build(context);
     if (isLoading) {
       return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
+        body: Center(child: CircularProgressIndicator()),
       );
     }
 
     return Scaffold(
       appBar: AppBar(
-        title: Image.asset(
-          'images/xyz_logo.png',
-          height: 70,
-          width: 70,
-          fit: BoxFit.contain,
+        title: GestureDetector(
+          onTap: () => Get.to(CLogin()),
+          child: Image.asset(
+            'images/xyz_logo.png',
+            height: 70,
+            width: 70,
+            fit: BoxFit.contain,
+          ),
         ),
         actions: [
           IconButton(
@@ -145,13 +149,17 @@ class _GMainState extends State<GMain> with AutomaticKeepAliveClientMixin {
                     controller: _pageController,
                     itemCount: recommendedGoods.length,
                     itemBuilder: (context, index) {
-                      return _buildShoeCard(recommendedGoods[index]);
+                      return _buildShoeCard(
+                        recommendedGoods[index],
+                      );
                     },
                   ),
                   Positioned(
                     right: 15,
                     child: IconButton(
-                      icon: const Icon(Icons.arrow_forward_ios),
+                      icon: const Icon(
+                        Icons.arrow_forward_ios,
+                      ),
                       iconSize: 30,
                       color: Colors.black,
                       style: IconButton.styleFrom(
@@ -168,12 +176,19 @@ class _GMainState extends State<GMain> with AutomaticKeepAliveClientMixin {
 
             // 인디케이터
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 15, 0, 30),
+              padding: const EdgeInsets.fromLTRB(
+                20,
+                15,
+                0,
+                30,
+              ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.start,
                 children: List.generate(
                   recommendedGoods.length,
-                  (index) => _buildIndicator(index == _currentPage),
+                  (index) => _buildIndicator(
+                    index == _currentPage,
+                  ),
                 ),
               ),
             ),
@@ -195,10 +210,14 @@ class _GMainState extends State<GMain> with AutomaticKeepAliveClientMixin {
               height: 220,
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 20),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                ),
                 itemCount: popularGoods.length,
                 itemBuilder: (context, index) {
-                  return _buildPopularItemCard(popularGoods[index]);
+                  return _buildPopularItemCard(
+                    popularGoods[index],
+                  );
                 },
               ),
             ),
@@ -222,10 +241,14 @@ class _GMainState extends State<GMain> with AutomaticKeepAliveClientMixin {
                 height: 220,
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                  ),
                   itemCount: recentGoods.length,
                   itemBuilder: (context, index) {
-                    return _buildPopularItemCard(recentGoods[index]);
+                    return _buildPopularItemCard(
+                      recentGoods[index],
+                    );
                   },
                 ),
               ),
@@ -241,7 +264,10 @@ class _GMainState extends State<GMain> with AutomaticKeepAliveClientMixin {
     return GestureDetector(
       onTap: () {
         Get.to(
-          () => GoodsDetailPage(goods: goods, userid: widget.userid),
+          () => GoodsDetailPage(
+            goods: goods,
+            userid: widget.userid,
+          ),
         );
       },
       child: Container(
@@ -266,7 +292,9 @@ class _GMainState extends State<GMain> with AutomaticKeepAliveClientMixin {
                 borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(20),
                 ),
-                child: goods.mainimage != null && goods.mainimage is Uint8List
+                child:
+                    goods.mainimage != null &&
+                        goods.mainimage is Uint8List
                     ? Image.memory(
                         goods.mainimage!,
                         width: double.infinity,
@@ -284,7 +312,8 @@ class _GMainState extends State<GMain> with AutomaticKeepAliveClientMixin {
             Padding(
               padding: const EdgeInsets.all(15.0),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment:
+                    CrossAxisAlignment.start,
                 children: [
                   Text(
                     goods.gcategory,
@@ -330,7 +359,10 @@ class _GMainState extends State<GMain> with AutomaticKeepAliveClientMixin {
     return GestureDetector(
       onTap: () {
         Get.to(
-          () => GoodsDetailPage(goods: goods, userid: widget.userid),
+          () => GoodsDetailPage(
+            goods: goods,
+            userid: widget.userid,
+          ),
         );
       },
       child: Container(
@@ -349,7 +381,9 @@ class _GMainState extends State<GMain> with AutomaticKeepAliveClientMixin {
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(10),
-                child: goods.mainimage != null && goods.mainimage is Uint8List
+                child:
+                    goods.mainimage != null &&
+                        goods.mainimage is Uint8List
                     ? Image.memory(
                         goods.mainimage!,
                         fit: BoxFit.cover,
@@ -405,7 +439,9 @@ class _GMainState extends State<GMain> with AutomaticKeepAliveClientMixin {
       height: 8.0,
       width: isActive ? 24.0 : 8.0,
       decoration: BoxDecoration(
-        color: isActive ? Colors.black : Colors.grey.shade400,
+        color: isActive
+            ? Colors.black
+            : Colors.grey.shade400,
         borderRadius: BorderRadius.circular(4),
       ),
     );

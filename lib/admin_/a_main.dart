@@ -4,6 +4,7 @@ import 'package:xyz_project_01/admin_/a_admin_add.dart';
 import 'package:xyz_project_01/admin_/a_requst.dart';
 import 'package:xyz_project_01/admin_/a_return_request.dart';
 import 'package:xyz_project_01/admin_/a_stock_status.dart';
+import 'package:xyz_project_01/customer/c_login.dart';
 
 class AMain extends StatefulWidget {
   const AMain({super.key});
@@ -26,7 +27,7 @@ class _AMainState extends State<AMain> {
     }, // 임시 함수
     {
       'text': '반품 요청',
-      'action': () => Get.to(() => const AReturnRequest()),
+      'action': () => Get.snackbar('알림', '반품 요청 페이지 준비 중'),
     }, // 임시 함수
     {
       'text': '결제 요청',
@@ -42,11 +43,14 @@ class _AMainState extends State<AMain> {
         // 로고와 '강남점 직원' 텍스트
         title: Row(
           children: [
-            Image.asset(
-              'images/xyz_logo.png', // 이미지 경로 확인 필요
-              height: 40,
-              width: 40,
-              fit: BoxFit.contain,
+            GestureDetector(
+              onTap: () => Get.to(CLogin()),
+              child: Image.asset(
+                'images/xyz_logo.png', // 이미지 경로 확인 필요
+                height: 40,
+                width: 40,
+                fit: BoxFit.contain,
+              ),
             ),
             const SizedBox(width: 10),
             const Text(
