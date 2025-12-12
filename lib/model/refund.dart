@@ -1,3 +1,5 @@
+// lib/model/refund.dart
+
 class Refund {      // 반품
 
   int? rseq;        // 반품번호 (AI)
@@ -19,8 +21,17 @@ class Refund {      // 반품
   Refund.fromMap(Map<String, dynamic> res)
   : rseq = res['rseq'],
     rdate = res['rdate'],
-    rstatus = res['rstatus'],
     rreason = res['rreason'],
+    rstatus = res['rstatus'],
     rpseq = res['rpseq'];
-
+    
+    Map<String, dynamic> toMap() {
+        return {
+            'rseq': rseq,
+            'rdate': rdate,
+            'rreason': rreason,
+            'rstatus': rstatus,
+            'rpseq': rpseq,
+        };
+    }
 }

@@ -1,59 +1,46 @@
+// lib/vm/database/refund_database.dart (최종 수정)
+
 import 'package:sqflite/sqflite.dart';
 import 'package:xyz_project_01/model/refund.dart';
-import 'package:xyz_project_01/vm/database/database_handler.dart';
+import 'package:xyz_project_01/vm/database/database_handler.dart'; 
 
 class RefundDatabase {
-  final handler = DatabaseHandler();
-
-  // 검색
-  Future<List<Refund>> queryRefund() async{
-    final Database db = await handler.initializeDB();
-    final List<Map<String, Object?>> queryResults = await db.rawQuery(
-      'select * from refund'
-    );
-    return queryResults.map((e) => Refund.fromMap(e)).toList();
-  }
-
-  // 입력
-  Future<int> insertRefund(Refund refund) async{
-    int result = 0;
-    final Database db = await handler.initializeDB();
-    result = await db.rawInsert(
-      """
-        insert into refund
-        (rdate, rreason, rstatus, rpseq)
-        values
-        (?,?,?,?)
-      """,
-      [refund.rdate, refund.rreason, refund.rstatus, refund.rpseq]
+  
+  // DatabaseHandler가 초기화 로직을 담당한다고 가정
+  final DatabaseHandler handler = DatabaseHandler(); 
+  
+  // 반품 요청 삽입
+  Future<int> insertRefund(Refund refund) async {
+    final db = await handler.initializeDB();
+    
+    final refundMap = refund.toMap();
+    refundMap.remove('rseq'); 
+    
+    int result = await db.insert(
+        'refund', 
+        refundMap,
+        conflictAlgorithm: ConflictAlgorithm.replace,
     );
     return result;
   }
 
-  // 수정
-  Future<int> updateRefund(Refund refund) async{
-    int result = 0;
-    final Database db = await handler.initializeDB();
-    result = await db.rawUpdate(
+  // ⭐️ 사용자 반품 내역 조회 (SQL 컬럼명 수정)
+  Future<List<Refund>> queryRefundsByUserId(String userId) async {
+    final db = await handler.initializeDB();
+    
+    // ⭐️ 오류 수정: p.cemail 대신 p.userid를 사용하도록 쿼리를 수정합니다.
+    final List<Map<String, dynamic>> maps = await db.rawQuery(
       """
-      update refund
-      set rstatus
-      where rseq = ?
+        SELECT r.* FROM refund r
+        JOIN purchase p ON r.rpseq = p.pseq
+        WHERE p.userid = ?  
+        ORDER BY r.rseq DESC
       """,
-      [refund.rstatus, refund.rseq]
+      [userId]
     );
-    return result;
-  }
 
-  // 삭제
-  Future<void> deleteRefund(int rseq) async{
-    final Database db = await handler.initializeDB();
-    await db.rawUpdate(
-      """
-        delete from refund
-        where rseq = ?
-      """,
-      [rseq]
-    );
+    return List.generate(maps.length, (i) {
+      return Refund.fromMap(maps[i]);
+    });
   }
 }

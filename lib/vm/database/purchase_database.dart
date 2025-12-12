@@ -1,85 +1,66 @@
+// lib/vm/database/purchase_database.dart (최종 수정)
+
 import 'package:sqflite/sqflite.dart';
-import 'package:xyz_project_01/model/purchase.dart';
-import 'package:xyz_project_01/vm/database/database_handler.dart';
+import 'package:xyz_project_01/model/purchase.dart'; 
+import 'package:xyz_project_01/vm/database/database_handler.dart'; 
 
 class PurchaseDatabase {
-  final handler = DatabaseHandler();
+  
+  final DatabaseHandler handler = DatabaseHandler(); 
 
-  // 검색
-  Future<List<Purchase>> queryPurchase() async{
-    final Database db = await handler.initializeDB();
-    final List<Map<String, Object?>> queryResults = await db.rawQuery(
-      'select * from purchase'
+  // 1. 구매 데이터를 DB에 삽입하는 메서드
+  Future<int> insertPurchase(Purchase purchase) async {
+    final db = await handler.initializeDB();
+    
+    final purchaseMap = purchase.toMap();
+    purchaseMap.remove('pseq'); 
+
+    int result = await db.insert(
+      'purchase', 
+      purchaseMap,
+      conflictAlgorithm: ConflictAlgorithm.replace,
     );
-    return queryResults.map((e) => Purchase.fromMap(e)).toList();
+    
+    return result; 
   }
 
-  // 입력
-  Future<int> insertPurchase(Purchase purchase) async{
-    int result = 0;
-    final Database db = await handler.initializeDB();
-    result = await db.rawInsert(
-      """
-        insert into purchase
-        (pstatus, pdate, pamount, ppaydate, ppayprice, ppayway, ppayamount, pdiscount, userid)
-        values
-        (?,?,?,?,?,?,?,?,?)
-      """,
-      [
-        purchase.pstatus, purchase.pdate,
-        purchase.pamount, purchase.ppaydate,
-        purchase.ppayprice, purchase.ppayway,
-        purchase.ppayamount, purchase.pdiscount, purchase.userid
-      ]
-    );
-    return result;
+
+  // ⭐️ 2. 상태에 따라 조회 가능한 구매 내역 조회 메서드 (SQL 컬럼명 수정)
+  Future<List<Purchase>> queryPurchasesForUser(String userId, {int? status}) async {
+    final db = await handler.initializeDB(); 
+    
+    // ⭐️ 오류 수정: cemail 대신 userid를 사용하도록 쿼리를 수정합니다.
+    String sql = "SELECT * FROM purchase WHERE userid = ?";
+    List<dynamic> args = [userId];
+
+    if (status != null) {
+      sql += " AND pstatus = ?";
+      args.add(status);
+    }
+    
+    sql += " ORDER BY pseq DESC";
+
+    final List<Map<String, dynamic>> maps = await db.rawQuery(sql, args);
+    
+    return List.generate(maps.length, (i) {
+      return Purchase.fromMap(maps[i]);
+    });
+  }
+  
+  Future<List<Purchase>> queryPurchaseByUserId(String userId) async {
+      return queryPurchasesForUser(userId);
   }
 
-  // 수정
-  Future<int> updatePurchase(Purchase purchase) async{
-    int result = 0;
-    final Database db = await handler.initializeDB();
-    result = await db.rawUpdate(
-      """
-      update purchase
-      set pstatus = ?, pamount = ?, ppaydate = ?, ppayprice = ?, ppayway = ?, ppayamount = ?
-      where pseq = ?
-      """,
-      [
-        purchase.pstatus,
-        purchase.pamount, purchase.ppaydate,
-        purchase.ppayprice, purchase.ppayway,
-        purchase.ppayamount, purchase.pseq
-      ]
-    );
-    return result;
-  }
+  // lib/vm/database/purchase_database.dart 에 추가해야 할 내용 가정
 
-  // 삭제
-  Future<void> deletePurchase(int pseq) async{
-    final Database db = await handler.initializeDB();
-    await db.rawUpdate(
-      """
-        delete from purchase
-        where pseq = ?
-      """,
-      [pseq]
-    );
-  }
-
-  // lib/vm/database/purchase_database.dart 파일 내용 (PurchaseDatabase 클래스 내부)
-
-// ... (기존 queryPurchase, insertPurchase 등 함수 유지)
-
-  // ⭐️ 특정 사용자 ID의 구매 내역 조회
-  Future<List<Purchase>> queryPurchaseByUserId(String userId) async{
-    final Database db = await handler.initializeDB();
-    final List<Map<String, Object?>> queryResults = await db.rawQuery(
-      'select * from purchase where userid = ? order by pdate desc',
-      [userId] // 현재 로그인된 사용자 ID를 조건으로 사용
-    );
-    return queryResults.map((e) => Purchase.fromMap(e)).toList();
-  }
-
-// ...
+// 3. 주문 상태 업데이트 (취소 시 사용)
+Future<int> updatePurchaseStatus(int pseq, int newStatus) async {
+  final db = await handler.initializeDB();
+  return await db.update(
+    'purchase', 
+    {'pstatus': newStatus}, 
+    where: 'pseq = ?', 
+    whereArgs: [pseq]
+  );
+}
 }
