@@ -13,22 +13,24 @@ class GoodsDatabase {
     return queryResults.map((e) => Goods.fromMap(e)).toList();
   }
 
-  // 빠른 검색
+  // 빠른 검색 (대표 상품만)
   Future<List<Goods>> queryRepresentativeGoods() async {
-  final Database db = await handler.initializeDB();
-  final result = await db.rawQuery('''
-    select *
-    from goods
-    where gseq in (
-      select min(gseq)
+    final Database db = await handler.initializeDB();
+    final result = await db.rawQuery('''
+      select *
       from goods
-      group by gname
-    )
-  ''');
-  return result.map((e) => Goods.fromMap(e)).toList();
+      where gseq in (
+        select min(gseq)
+        from goods
+        group by gname
+      )
+    ''');
+    return result.map((e) => Goods.fromMap(e)).toList();
   }
 
   // 중복 체크
+  // ✅ 기존 기준 유지: (gname + gsize + gcolor)
+  // - manufacturer/price는 옵션 중복 기준에 보통 안 넣음
   Future<bool> existsGoods({
     required String gname,
     required String gsize,
@@ -58,12 +60,13 @@ class GoodsDatabase {
       return 0;
     }
 
+    // ✅ manufacturer, price 컬럼 추가
     final int result = await db.rawInsert(
       """
         insert into goods
-        (gsumamount, gname, gengname, gsize, gcolor, gcategory, mainimage, topimage, backimage, sideimage)
+        (gsumamount, gname, gengname, gsize, gcolor, gcategory, manufacturer, price, mainimage, topimage, backimage, sideimage)
         values
-        (?,?,?,?,?,?,?,?,?,?)
+        (?,?,?,?,?,?,?,?,?,?,?,?)
       """,
       [
         goods.gsumamount,
@@ -72,12 +75,15 @@ class GoodsDatabase {
         goods.gsize,
         goods.gcolor,
         goods.gcategory,
+        goods.manufacturer, // ✅ 추가
+        goods.price,        // ✅ 추가 (double)
         goods.mainimage,
         goods.topimage,
         goods.backimage,
         goods.sideimage,
       ],
     );
+
     return result;
   }
 
@@ -89,20 +95,23 @@ class GoodsDatabase {
 
     final Database db = await handler.initializeDB();
 
+    // ✅ manufacturer, price 업데이트 포함
     final int result = await db.rawUpdate(
       """
-      update goods
-      set gsumamount = ?, 
-          gname = ?, 
-          gengname = ?, 
-          gsize = ?, 
-          gcolor = ?, 
-          gcategory = ?,
-          mainimage = ?,
-          topimage = ?,
-          backimage = ?,
-          sideimage = ?
-      where gseq = ?
+        update goods
+        set gsumamount = ?, 
+            gname = ?, 
+            gengname = ?, 
+            gsize = ?, 
+            gcolor = ?, 
+            gcategory = ?,
+            manufacturer = ?,
+            price = ?,
+            mainimage = ?,
+            topimage = ?,
+            backimage = ?,
+            sideimage = ?
+        where gseq = ?
       """,
       [
         goods.gsumamount,
@@ -111,6 +120,8 @@ class GoodsDatabase {
         goods.gsize,
         goods.gcolor,
         goods.gcategory,
+        goods.manufacturer,
+        goods.price,
         goods.mainimage,
         goods.topimage,
         goods.backimage,
@@ -118,18 +129,19 @@ class GoodsDatabase {
         goods.gseq,
       ],
     );
+
     return result;
   }
 
   // 삭제
-  Future<void> deleteGoods(int gseq) async{
+  Future<void> deleteGoods(int gseq) async {
     final Database db = await handler.initializeDB();
     await db.rawUpdate(
       """
         delete from goods
         where gseq = ?
       """,
-      [gseq]
+      [gseq],
     );
   }
 
@@ -160,13 +172,8 @@ class GoodsDatabase {
     if (result.isEmpty) return null;
     return Goods.fromMap(result.first);
   }
-  // lib/vm/database/goods_database.dart 파일 내용 (GoodsDatabase 클래스 내부에 추가)
 
-// ... (기존 query, insert, update, delete 함수 유지)
-
-  // ⭐️⭐️⭐️ 상품 재고(gqty)를 업데이트하는 함수 ⭐️⭐️⭐️
-  // quantityChange는 재고 증가(+값) 또는 감소(-값)입니다.
-  // 총 재고량(gsumamount)을 증감하는 함수로 수정
+  // ⭐️⭐️⭐️ 총 재고량(gsumamount)을 증감하는 함수 ⭐️⭐️⭐️
   Future<int> updateGoodsQuantity({
     required int gseq,
     required int quantityChange,
@@ -197,6 +204,4 @@ class GoodsDatabase {
     }
     return result;
   }
-
-  
 }

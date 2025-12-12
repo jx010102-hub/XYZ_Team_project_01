@@ -31,6 +31,8 @@ class DatabaseHandler {
             gsize text,
             gcolor text,
             gcategory text,
+            manufacturer text,
+            price real,
             mainimage blob,
             topimage blob,
             backimage blob,

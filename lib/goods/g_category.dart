@@ -111,6 +111,8 @@ Future<Goods> convertProductToGoods(
     gcategory: product.gcategory,
     gsize: product.gsize,
     gcolor: product.gcolor,
+    price: product.price.toDouble(),
+    manufacturer: product.manufacturer,
 
     // ⭐️ 로드된 Uint8List 데이터를 mainimage에 할당
     mainimage: mainImageBytes,
