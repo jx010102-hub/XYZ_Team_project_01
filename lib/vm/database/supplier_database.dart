@@ -14,6 +14,19 @@ class SupplierDatabase {
     return queryResults.map((e) => Supplier.fromMap(e)).toList();
   }
 
+  // 로그인
+  Future<bool> loginCheck(String id, String name) async {
+    final Database db = await handler.initializeDB();
+    final List<Map<String, dynamic>> result = await db.rawQuery(
+      """
+      select * from supplier
+      where sid = ? and sname = ?
+      """,
+      [id, name]
+    );
+    return result.isNotEmpty;
+  }
+
   // 입력
   Future<int> insertSupplier(Supplier supplier) async{
     int result = 0;

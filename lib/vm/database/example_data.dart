@@ -2,7 +2,7 @@
 
 import 'package:sqflite/sqflite.dart';
 import 'package:xyz_project_01/model/employee.dart';
-import 'package:xyz_project_01/vm/database/database_handler.dart'; 
+import 'package:xyz_project_01/vm/database/database_handler.dart';
 
 class ExampleData {
   
@@ -22,9 +22,40 @@ class ExampleData {
   // ⭐️ 4. 직원 (employee) 예시 데이터 (자동 생성 함수 사용) ⭐️
   static final List<Map<String, dynamic>> employees = _generateEmployeeData();
   
-  // 5. 공급업체 (supplier) 예시 데이터 (기존 내용 유지)
+  // 5. 공급업체 (supplier) 예시 데이터
   static final List<Map<String, dynamic>> suppliers = [
-    // ...
+    {
+      'sid': 3001,
+      'sname': '나이키',
+    },
+    {
+      'sid': 3002,
+      'sname': '아디다스',
+    },
+    {
+      'sid': 3003,
+      'sname': '뉴발란스',
+    },
+    {
+      'sid': 3004,
+      'sname': '푸마',
+    },
+    {
+      'sid': 3005,
+      'sname': '아식스',
+    },
+    {
+      'sid': 3006,
+      'sname': '프로스펙스',
+    },
+    {
+      'sid': 3007,
+      'sname': '스케쳐스',
+    },
+    {
+      'sid': 9999,
+      'sname': 'XYZ',
+    },
   ];
 
   // (purchase, refund, approval, orders 데이터는 일단 비워둡니다.)
@@ -265,7 +296,6 @@ class ExampleData {
     return list;
   }
 
-
   // 이메일 중복 체크 (기존 유지)
   Future<int> idCheck(String id) async {
     final db = await handler.initializeDB();
@@ -339,5 +369,4 @@ class ExampleData {
     );
   }
 
-  
 }

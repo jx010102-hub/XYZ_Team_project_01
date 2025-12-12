@@ -2,7 +2,6 @@
 
 import 'dart:typed_data';
 import 'package:flutter/services.dart' show rootBundle;
-import 'package:sqflite/sqflite.dart'; 
 import 'package:xyz_project_01/vm/database/database_handler.dart';
 import 'package:xyz_project_01/vm/database/example_data.dart';
 
