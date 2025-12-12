@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:xyz_project_01/vm/database/example_data.dart'; // 데이터베이스 파일은 건드리지 않음
+// ⭐️ 추가 임포트: GoodsDetail, Goods 모델
+import 'package:xyz_project_01/insert/goods_detail_page.dart';
+import 'package:xyz_project_01/model/goods.dart';
+import 'package:xyz_project_01/vm/database/example_data.dart';
+import 'dart:typed_data'; // Uint8List 사용
+import 'package:flutter/services.dart'
+    show rootBundle, ByteData; // 추가
 
 // ⭐️ 1. 상품 데이터 모델 정의 (변경 없음)
 class Product {
@@ -11,8 +17,8 @@ class Product {
   final String gcolor;
   final String mainimagePath;
   final int gsumamount;
-  final int price; // 임의로 추가된 가격 필드
-  final String manufacturer; // 임의로 추가된 제조사 필드
+  final int price;
+  final String manufacturer;
 
   Product({
     required this.gname,
@@ -27,20 +33,16 @@ class Product {
   });
 }
 
-// ⭐️ 2. ExampleData를 Product 모델로 변환하고 가격/제조사를 부여하는 함수 (수정됨)
+// ⭐️ 2. ExampleData를 Product 모델로 변환하고 가격/제조사를 부여하는 함수 (변경 없음)
 List<Product> loadAllProducts() {
   final List<Map<String, dynamic>> rawGoods =
       ExampleData.goods;
   final List<Product> products = [];
 
-  // ⭐️ [핵심 수정 1]: 모든 상품의 가격을 150,000원으로 통일합니다.
   const int unifiedPrice = 150000;
-
-  // ⭐️ [핵심 수정 2]: 모든 상품의 제조사를 'XYZ'로 통일합니다.
   const String unifiedManufacturer = 'XYZ';
 
   for (final rawProduct in rawGoods) {
-    // 필수 데이터가 포함되어 있다고 가정하고 Product 객체 생성
     products.add(
       Product(
         gname: rawProduct['gname'] as String,
@@ -48,6 +50,7 @@ List<Product> loadAllProducts() {
         gcategory: rawProduct['gcategory'] as String,
         gsize: rawProduct['gsize'] as String,
         gcolor: rawProduct['gcolor'] as String,
+        // ExampleData에서 설정된 mainimagePath를 사용합니다.
         mainimagePath:
             rawProduct['mainimagePath'] as String,
         gsumamount: rawProduct['gsumamount'] as int,
@@ -60,6 +63,68 @@ List<Product> loadAllProducts() {
 
   return products;
 }
+
+// ⭐️ 3. Product 모델을 Goods 모델로 변환하는 함수 추가
+// GoodsDetailPage가 요구하는 Goods 객체를 만들기 위해 사용됩니다.
+// GCategory에서는 실제 DB 이미지가 아닌 Asset 이미지를 사용하므로,
+// GoodsDetail로 넘길 때는 DB 이미지 필드를 null 처리하거나 더미 데이터를 사용합니다.
+
+// Goods 객체의 이미지 필드(mainimage, topimage 등)는 Uint8List 타입이므로,
+// GCategory에서 사용하는 String 타입의 mainimagePath를 직접 사용할 수 없습니다.
+// 따라서, 이 필드들은 일단 null로 처리합니다. (GoodsDetailPage에서 로딩 시 DB에서 실제 데이터를 로드하도록 되어 있음)
+
+// lib/goods/g_category.dart 파일 내
+
+// lib/goods/g_category.dart 파일 내 _GCategoryState 클래스 내부
+
+// ⭐️ 1. Asset 이미지를 Uint8List로 변환하는 비동기 함수 추가
+Future<Uint8List?> _loadAssetToBytes(
+  String assetPath,
+) async {
+  try {
+    final ByteData data = await rootBundle.load(assetPath);
+    return data.buffer.asUint8List();
+  } catch (e) {
+    print(
+      "❌ [Image Load Error] Asset을 로드하지 못했습니다: $assetPath, Error: $e",
+    );
+    return null;
+  }
+}
+
+// ⭐️ 2. Product 모델을 Goods 모델로 변환하는 함수를 Future<Goods>로 변경
+// (기존 convertProductToGoods 함수를 아래 코드로 대체)
+Future<Goods> convertProductToGoods(
+  Product product,
+  String userid,
+) async {
+  // mainimagePath를 사용하여 Asset 이미지 데이터를 로드
+  final Uint8List? mainImageBytes = await _loadAssetToBytes(
+    product.mainimagePath,
+  );
+
+  return Goods(
+    gseq: null,
+    gsumamount: product.gsumamount,
+    gname: product.gname,
+    gengname: product.gengname,
+    gcategory: product.gcategory,
+    gsize: product.gsize,
+    gcolor: product.gcolor,
+
+    // ⭐️ 로드된 Uint8List 데이터를 mainimage에 할당
+    mainimage: mainImageBytes,
+
+    // 나머지 이미지는 Asset 경로 정보가 없으므로 null 유지
+    topimage: null,
+    backimage: null,
+    sideimage: null,
+  );
+}
+
+// ⭐️ 3. initState 상단에 rootBundle 사용을 위한 임포트 추가
+// (이미 임포트되어 있지 않다면 추가합니다.)
+
 // ------------------------------------------------------------------
 
 class GCategory extends StatefulWidget {
@@ -71,15 +136,14 @@ class GCategory extends StatefulWidget {
 }
 
 class _GCategoryState extends State<GCategory> {
-  // ⭐️ 3. 상품 데이터 상태 관리
+  // ⭐️ 4. 상품 데이터 상태 관리
   late List<Product> _allProducts;
   late List<Product> _filteredProducts;
 
   // 필터 상태 초기값
   String _selectedCategory = '러닝화';
   String _selectedManufacturer = 'XYZ';
-  String _selectedPriceRange =
-      '모두'; // ⭐️ 초기 가격 필터를 '모두'로 설정
+  String _selectedPriceRange = '모두'; // 초기 가격 필터를 '모두'로 설정
 
   // 바텀 시트에서 임시로 사용할 필터 값
   late String _tempSelectedCategory;
@@ -89,20 +153,18 @@ class _GCategoryState extends State<GCategory> {
   @override
   void initState() {
     super.initState();
-    // ⭐️ 모든 상품 로드
     _allProducts = loadAllProducts();
 
-    // 초기 필터 상태 설정
     _tempSelectedCategory = _selectedCategory;
     _tempSelectedManufacturer = _selectedManufacturer;
     _tempSelectedPriceRange = _selectedPriceRange;
 
-    // ⭐️ 초기 필터링 적용
     _filterProducts(shouldSetState: false);
   }
 
-  // ⭐️ 4. 상품 필터링 로직 (가격 필터 로직 수정)
+  // ⭐️ 5. 상품 필터링 로직 (변경 없음)
   void _filterProducts({bool shouldSetState = true}) {
+    // ... (필터링 로직 유지) ...
     List<Product> results = _allProducts;
 
     // 카테고리 필터링
@@ -121,7 +183,7 @@ class _GCategoryState extends State<GCategory> {
           .toList();
     }
 
-    // ⭐️ [핵심 수정 3]: 가격 필터링 로직 (가격 필터가 '모두'가 아닐 때만 적용)
+    // 가격 필터링 로직 (가격 필터가 '모두'가 아닐 때만 적용)
     if (_selectedPriceRange != '모두') {
       if (_selectedPriceRange == '10만원 이하') {
         results = results
@@ -161,7 +223,8 @@ class _GCategoryState extends State<GCategory> {
     }
   }
 
-  // ⭐️ 현재 적용된 필터를 보여주는 작은 태그 위젯
+  // ... (buildFilterTag, buildCurrentFilters 함수 유지) ...
+
   Widget _buildFilterTag(String text, Color color) {
     if (text == '모두') return const SizedBox.shrink();
 
@@ -185,7 +248,6 @@ class _GCategoryState extends State<GCategory> {
     );
   }
 
-  // ⭐️ 현재 적용된 필터 표시 및 상품 개수 위젯
   Widget _buildCurrentFilters() {
     return Padding(
       padding: const EdgeInsets.symmetric(
@@ -207,7 +269,6 @@ class _GCategoryState extends State<GCategory> {
           ),
           const SizedBox(width: 8),
 
-          // ⭐️ 필터링된 상품 개수 표시
           Text(
             '${_filteredProducts.length}개 상품',
             style: const TextStyle(color: Colors.grey),
@@ -217,14 +278,13 @@ class _GCategoryState extends State<GCategory> {
     );
   }
 
-  // ⭐️ 5. build 함수
+  // ⭐️ 6. build 함수 (변경 없음)
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        // ... (앱바 로직 유지) ...
         title: Image.asset(
-          'images/xyz_logo.png', // 실제 사용하는 로고 경로로 변경
+          'images/xyz_logo.png',
           height: 70,
           width: 70,
           fit: BoxFit.contain,
@@ -232,7 +292,6 @@ class _GCategoryState extends State<GCategory> {
         backgroundColor: Colors.white,
         elevation: 0,
         actions: [
-          // ... (검색, 알림 아이콘) ...
           IconButton(
             onPressed: () {},
             icon: const Icon(
@@ -264,7 +323,6 @@ class _GCategoryState extends State<GCategory> {
         children: [
           _buildCurrentFilters(),
 
-          // ⭐️ 필터링된 상품 목록을 보여주는 GridView
           Expanded(
             child: GridView.builder(
               padding: const EdgeInsets.all(10),
@@ -278,7 +336,37 @@ class _GCategoryState extends State<GCategory> {
               itemCount: _filteredProducts.length,
               itemBuilder: (context, index) {
                 final product = _filteredProducts[index];
-                return _buildProductCard(product);
+                // ⭐️ [핵심 수정]: 상품 카드에 onTap 제스처 추가
+                return GestureDetector(
+                  onTap: () async {
+                    // <-- async 추가
+                    // 로딩 표시 (선택 사항)
+                    Get.dialog(
+                      const Center(
+                        child: CircularProgressIndicator(),
+                      ),
+                      barrierDismissible: false,
+                    );
+
+                    // Product를 Goods로 변환 (await 사용)
+                    final Goods goodsData =
+                        await convertProductToGoods(
+                          product,
+                          widget.userid,
+                        );
+
+                    Get.back(); // 로딩 창 닫기
+
+                    // GoodsDetailPage로 이동
+                    Get.to(
+                      GoodsDetailPage(
+                        goods: goodsData,
+                        userid: widget.userid,
+                      ),
+                    );
+                  },
+                  child: _buildProductCard(product),
+                );
               },
             ),
           ),
@@ -287,13 +375,8 @@ class _GCategoryState extends State<GCategory> {
     );
   }
 
-  // ⭐️ 개별 상품 카드 위젯 (Product 객체 사용)
-  // lib/goods/g_category.dart 파일 내의 _GCategoryState 클래스 내부
-
-  // ⭐️ 개별 상품 카드 위젯 (Product 객체 사용) - 요청하신 디자인으로 변경
+  // ⭐️ 7. 개별 상품 카드 위젯 (디자인 유지)
   Widget _buildProductCard(Product product) {
-    // ⚠️ 가격 포맷팅 로직은 이제 사용하지 않으며, 가격은 "150,000원"으로 고정 표시됩니다.
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -305,7 +388,7 @@ class _GCategoryState extends State<GCategory> {
             ),
             child: Center(
               child: Image.asset(
-                product.mainimagePath, // 'mainX.png' 경로 사용
+                product.mainimagePath,
                 fit: BoxFit.cover,
                 width: double.infinity,
                 errorBuilder: (context, error, stackTrace) {
@@ -316,16 +399,13 @@ class _GCategoryState extends State<GCategory> {
           ),
         ),
 
-        // ⭐️ [수정된 부분]: 텍스트 정보 영역 (요청하신 디자인으로 변경)
         Padding(
-          padding: const EdgeInsets.all(
-            10.0,
-          ), // GridView builder padding과 맞춰 10.0으로 조정
+          padding: const EdgeInsets.all(10.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                product.gcategory, // 카테고리 사용
+                product.gcategory,
                 style: const TextStyle(
                   color: Colors.grey,
                   fontSize: 12,
@@ -334,7 +414,7 @@ class _GCategoryState extends State<GCategory> {
               ),
               const SizedBox(height: 5),
               Text(
-                product.gname, // 제품명 사용
+                product.gname,
                 style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -343,9 +423,8 @@ class _GCategoryState extends State<GCategory> {
                 overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 5),
-              // 금액 표시: "150,000원"으로 고정
               const Text(
-                "150,000원", // ⭐️ 하드코딩된 가격 사용
+                "150,000원",
                 style: TextStyle(
                   fontSize: 16,
                   color: Colors.blueAccent,
@@ -355,18 +434,11 @@ class _GCategoryState extends State<GCategory> {
             ],
           ),
         ),
-        // ⭐️ [수정 끝]
       ],
     );
   }
 
-  // ... 나머지 GCategoryState 코드는 이전과 동일합니다.
-
-  // -----------------------------------------------------------
-  // ⭐️ 필터 바텀 시트 관련 함수
-  // -----------------------------------------------------------
-
-  // ⭐️ 카테고리 칩 위젯 그룹 (DB gcategory 기준 + '모두' 추가)
+  // ⭐️ 8. 필터 바텀 시트 관련 함수 (변경 없음)
   Widget _buildCategoryChips(StateSetter setStateModal) {
     final List<String> categories = [
       '러닝화',
@@ -392,7 +464,6 @@ class _GCategoryState extends State<GCategory> {
     );
   }
 
-  // ⭐️ 제조사 칩 위젯 그룹
   Widget _buildManufacturerChips(
     StateSetter setStateModal,
   ) {
@@ -421,10 +492,9 @@ class _GCategoryState extends State<GCategory> {
     );
   }
 
-  // ⭐️ 가격 칩 위젯 그룹 (가장 상단에 '모두' 추가)
   Widget _buildPriceChips(StateSetter setStateModal) {
     final List<String> prices = [
-      '모두', // ⭐️ '모두' 옵션 추가됨
+      '모두',
       '10만원 이하',
       '10~20만원',
       '20~30만원',
@@ -449,14 +519,12 @@ class _GCategoryState extends State<GCategory> {
     );
   }
 
-  // ⭐️ 하단 적용 버튼 위젯
   Widget _buildApplyButton() {
     return Container(
       padding: const EdgeInsets.all(20),
       width: double.infinity,
       child: ElevatedButton(
         onPressed: () {
-          // 1. 임시 필터 값을 실제 필터 상태 변수에 적용
           setState(() {
             _selectedCategory = _tempSelectedCategory;
             _selectedManufacturer =
@@ -464,10 +532,8 @@ class _GCategoryState extends State<GCategory> {
             _selectedPriceRange = _tempSelectedPriceRange;
           });
 
-          // 2. 바텀 시트 닫기
           Get.back();
 
-          // 3. 필터링 로직 호출 및 메인 화면 새로고침
           _filterProducts();
         },
         style: ElevatedButton.styleFrom(
@@ -488,9 +554,7 @@ class _GCategoryState extends State<GCategory> {
     );
   }
 
-  // ⭐️ 필터 설정을 위한 모달 바텀 시트 (재사용 유지)
   void _showFilterBottomSheet(BuildContext context) {
-    // 바텀 시트를 열 때 현재 선택된 값을 임시 변수에 복사
     _tempSelectedCategory = _selectedCategory;
     _tempSelectedManufacturer = _selectedManufacturer;
     _tempSelectedPriceRange = _selectedPriceRange;
@@ -516,7 +580,6 @@ class _GCategoryState extends State<GCategory> {
                   crossAxisAlignment:
                       CrossAxisAlignment.start,
                   children: [
-                    // 닫기 핸들
                     Center(
                       child: Container(
                         margin: const EdgeInsets.symmetric(
@@ -531,8 +594,6 @@ class _GCategoryState extends State<GCategory> {
                         ),
                       ),
                     ),
-
-                    // 필터 내용 (스크롤 가능)
                     Expanded(
                       child: SingleChildScrollView(
                         padding: const EdgeInsets.all(20),
@@ -540,21 +601,18 @@ class _GCategoryState extends State<GCategory> {
                           crossAxisAlignment:
                               CrossAxisAlignment.start,
                           children: [
-                            // 1. 카테고리 섹션
                             _buildFilterTitle('카테고리'),
                             _buildCategoryChips(
                               setStateModal,
                             ),
                             const SizedBox(height: 25),
 
-                            // 2. 제조사 섹션
                             _buildFilterTitle('제조사'),
                             _buildManufacturerChips(
                               setStateModal,
                             ),
                             const SizedBox(height: 25),
 
-                            // 3. 가격 섹션
                             _buildFilterTitle('가격'),
                             _buildPriceChips(setStateModal),
                             const SizedBox(height: 50),
@@ -562,8 +620,6 @@ class _GCategoryState extends State<GCategory> {
                         ),
                       ),
                     ),
-
-                    // 4. 하단 적용 버튼
                     _buildApplyButton(),
                   ],
                 ),
