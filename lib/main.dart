@@ -6,11 +6,11 @@ import 'package:xyz_project_01/vm/database/seed_data.dart'; // SeedData import
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // ⭐️ DB 초기화 및 예시 데이터 삽입 로직 호출
   final seed = SeedData();
   await seed.insertExampleData();
-  
+
   Get.put(StoreController(), permanent: true);
   runApp(const MyApp());
 }
@@ -33,7 +33,7 @@ class MyApp extends StatelessWidget {
         ),
       ),
       // 시작 페이지는 GMain이 아닌 CLogin으로 가정하고 그대로 둡니다.
-      home: CLogin(), 
+      home: CLogin(),
       // 만약 바로 GMain을 보려면 home: GMain()으로 변경하세요.
     );
   }
