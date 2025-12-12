@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart'; // 금액 포맷팅을 위해 intl 패키지 필요
+import 'package:get/get.dart';
+import 'package:xyz_project_01/controller/store_controller.dart';
 
 // ⭐️ 1. 장바구니 항목의 데이터 구조 정의
 class BasketItem {
@@ -32,6 +34,8 @@ class GBasket extends StatefulWidget {
 
 class _GBasketState extends State<GBasket> {
   
+  final StoreController storeController = Get.find<StoreController>();
+
   // ⭐️ 2. 장바구니 목록 상태 변수
   List<BasketItem> _items = [];
   
@@ -318,36 +322,107 @@ class _GBasketState extends State<GBasket> {
       ),
       
       // 3. 하단 고정된 결제 버튼 영역
-      bottomSheet: GestureDetector(
-        // ⭐️ 하단 '구매하기' 버튼 클릭 시 다이얼로그 호출
-        onTap: () => _showNotImplementedDialog(context, '총 ${_totalQuantity}개 상품 구매하기'),
-        child: Container(
-          height: 80,
+      // 3. 하단 고정된 결제 버튼 영역
+      bottomSheet: Obx(() {
+        final store = storeController.selectedStore.value;
+
+        return Container(
           decoration: BoxDecoration(
-            color: const Color(0xFFE53935), 
+            color: Colors.transparent, // 실제 색은 내부에서 나뉨
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.3),
-                blurRadius: 10,
-                offset: const Offset(0, -5),
+                color: Colors.black.withOpacity(0.2),
+                blurRadius: 8,
+                offset: const Offset(0, -3),
               ),
             ],
           ),
-          alignment: Alignment.center,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20.0),
-            child: Text(
-              // ⭐️ 총액과 수량 상태 변수 사용
-              '${_formatCurrency(_totalPrice)} · 총 ${_totalQuantity}개 상품 구매하기',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 🔴 1) 구매하기 영역 (빨간색)
+              GestureDetector(
+                onTap: () => _showNotImplementedDialog(
+                    context,
+                    '총 ${_totalQuantity}개 상품 구매하기'
+                ),
+                child: Container(
+                  height: 60,
+                  width: double.infinity,
+                  color: const Color(0xFFE53935), // 빨간 영역
+                  alignment: Alignment.center,
+                  child: Text(
+                    '${_formatCurrency(_totalPrice)} · 총 ${_totalQuantity}개 상품 구매하기',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 17,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ),
-            ),
+
+              // 🟦 선택 매장 정보 영역(있을 때만 표시)
+              if (store != null) ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: const BoxDecoration(
+                    color: Colors.white,      // 매장정보 박스 배경 = 흰색
+                    borderRadius: BorderRadius.only(
+                      bottomLeft: Radius.circular(12),
+                      bottomRight: Radius.circular(12),
+                    ),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.store, color: Colors.black87, size: 20),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              store['name'] as String,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black87,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              '${store['district']} · ${store['address']}',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          // 변경 버튼 눌렀을 때 동작
+                          _showNotImplementedDialog(context, "매장 변경하기");
+                        },
+                        child: const Text(
+                          "변경",
+                          style: TextStyle(color: Colors.blue, fontSize: 12),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
           ),
-        ),
-      ),
+        );
+      }),
     );
   }
 }

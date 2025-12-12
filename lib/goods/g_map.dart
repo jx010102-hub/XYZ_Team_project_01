@@ -1,14 +1,23 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart'; 
-import 'package:latlong2/latlong.dart'; 
+import 'package:flutter_map/flutter_map.dart';
+import 'package:get/get.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:xyz_project_01/controller/store_controller.dart';
 
-// ⭐️ DB 연동을 위한 Import (프로젝트 구조에 맞게 경로를 수정해야 합니다!)
+// ⭐️ DB 연동을 위한 Import
 import 'package:xyz_project_01/model/branch.dart';
-import 'package:xyz_project_01/vm/database/branch_database.dart'; 
+import 'package:xyz_project_01/util/store_selection.dart';
+import 'package:xyz_project_01/vm/database/branch_database.dart';
 
 class GMap extends StatefulWidget {
   final String userid;
-  const GMap({super.key, required this.userid});
+  final bool popOnSelect; // ✅ PayPage에서 선택 후 결과를 돌려줄 때 사용
+
+  const GMap({
+    super.key,
+    required this.userid,
+    this.popOnSelect = false,
+  });
 
   @override
   State<GMap> createState() => _GMapState();
@@ -17,49 +26,72 @@ class GMap extends StatefulWidget {
 class _GMapState extends State<GMap> {
   // --- 컨트롤러 및 상태 변수 ---
   final LatLng gangnamStation = const LatLng(37.4981, 127.0276);
-  final Distance distance = const Distance(); 
+  final Distance distance = const Distance();
   final TextEditingController _searchController = TextEditingController();
   final MapController _mapController = MapController();
-  
-  int _currentTab = 0; 
-  String _currentSearchQuery = ''; 
-  String? _selectedDistrict; 
+  final StoreController storeController = Get.find<StoreController>();
+  int _currentTab = 0;
+  String _currentSearchQuery = '';
+  String? _selectedDistrict;
+
+  // ⭐️ 지도 이동 관련 상태
+  LatLng? _pendingCenter; // 선택된 매장의 좌표를 임시 저장
+  bool _mapReady = false;   // ✅ 지도 준비 여부
 
   // ⭐️ DB 핸들러 인스턴스
-  final BranchDatabase _branchDB = BranchDatabase(); 
-  
+  final BranchDatabase _branchDB = BranchDatabase();
+
   // ⭐️ 화면에 표시할 매장 목록
-  List<Map<String, dynamic>> allStores = []; 
-  
+  List<Map<String, dynamic>> allStores = [];
+
+  // ⭐️ 선택된 매장 (하단 바 + PayPage 전달용)
+  Map<String, dynamic>? _selectedStore;
+
   // --- 기타 데이터 정의 ---
   final List<String> seoulDistricts = [
-    '강남구', '강동구', '강북구', '강서구', '관악구', '광진구', '구로구', 
-    '금천구', '노원구', '도봉구', '동대문구', '동작구', '마포구', '서대문구', 
-    '서초구', '성동구', '성북구', '송파구', '양천구', '영등포구', '용산구', 
+    '강남구', '강동구', '강북구', '강서구', '관악구', '광진구', '구로구',
+    '금천구', '노원구', '도봉구', '동대문구', '동작구', '마포구', '서대문구',
+    '서초구', '성동구', '성북구', '송파구', '양천구', '영등포구', '용산구',
     '은평구', '종로구', '중구', '중랑구'
   ];
 
   final Map<String, LatLng> seoulDistrictCenters = {
-    '강남구': LatLng(37.5175, 127.0475), '강동구': LatLng(37.5301, 127.1238), '강북구': LatLng(37.6398, 127.0255),
-    '강서구': LatLng(37.5509, 126.8496), '관악구': LatLng(37.4783, 126.9515), '광진구': LatLng(37.5385, 127.0827),
-    '구로구': LatLng(37.4954, 126.8582), '금천구': LatLng(37.4578, 126.8953), '노원구': LatLng(37.6538, 127.0567),
-    '도봉구': LatLng(37.6687, 127.0471), '동대문구': LatLng(37.5744, 127.0396), '동작구': LatLng(37.5124, 126.9392),
-    '마포구': LatLng(37.5661, 126.9011), '서대문구': LatLng(37.5794, 126.9366), '서초구': LatLng(37.4835, 127.0326),
-    '성동구': LatLng(37.5635, 127.0366), '성북구': LatLng(37.5894, 127.0167), '송파구': LatLng(37.5145, 127.1065),
-    '양천구': LatLng(37.5255, 126.8661), '영등포구': LatLng(37.5264, 126.8966), '용산구': LatLng(37.5323, 126.9905),
-    '은평구': LatLng(37.6027, 126.9292), '종로구': LatLng(37.5735, 126.9794), '중구': LatLng(37.5637, 126.9975),
+    '강남구': LatLng(37.5175, 127.0475),
+    '강동구': LatLng(37.5301, 127.1238),
+    '강북구': LatLng(37.6398, 127.0255),
+    '강서구': LatLng(37.5509, 126.8496),
+    '관악구': LatLng(37.4783, 126.9515),
+    '광진구': LatLng(37.5385, 127.0827),
+    '구로구': LatLng(37.4954, 126.8582),
+    '금천구': LatLng(37.4578, 126.8953),
+    '노원구': LatLng(37.6538, 127.0567),
+    '도봉구': LatLng(37.6687, 127.0471),
+    '동대문구': LatLng(37.5744, 127.0396),
+    '동작구': LatLng(37.5124, 126.9392),
+    '마포구': LatLng(37.5661, 126.9011),
+    '서대문구': LatLng(37.5794, 126.9366),
+    '서초구': LatLng(37.4835, 127.0326),
+    '성동구': LatLng(37.5635, 127.0366),
+    '성북구': LatLng(37.5894, 127.0167),
+    '송파구': LatLng(37.5145, 127.1065),
+    '양천구': LatLng(37.5255, 126.8661),
+    '영등포구': LatLng(37.5264, 126.8966),
+    '용산구': LatLng(37.5323, 126.9905),
+    '은평구': LatLng(37.6027, 126.9292),
+    '종로구': LatLng(37.5735, 126.9794),
+    '중구': LatLng(37.5637, 126.9975),
     '중랑구': LatLng(37.5960, 127.0929),
   };
-  
+
   // -------------------------------------------------------------
   // ⭐️ 라이프사이클 및 DB 초기화
   // -------------------------------------------------------------
-  
+
   @override
   void initState() {
     super.initState();
     _searchController.addListener(_onSearchChanged);
-    _initDatabaseAndLoadStores(); 
+    _initDatabaseAndLoadStores();
   }
 
   @override
@@ -68,18 +100,17 @@ class _GMapState extends State<GMap> {
     _searchController.dispose();
     super.dispose();
   }
-  
-  // ⭐️ 핵심 함수: 앱 실행 시 DB에 더미 데이터 삽입 및 로드
+
+  // ⭐️ 앱 실행 시 DB에 더미 데이터 삽입 및 로드
   void _initDatabaseAndLoadStores() async {
-    // 1. 초기 더미 데이터 정의
+    // 1. 초기 더미 데이터 정의 (각 항목 한 줄)
     List<Map<String, dynamic>> initialData = [
-      {'bid': 1, 'name': '강남로데오점(XYZ 슈퍼)', 'district': '강남구', 'address': '서울특별시 강남구 논현로102길 3', 'image': 'images/xyz_logo.png', 'lat': 37.5255, 'lng': 127.0396}, 
-      {'bid': 2, 'name': '서초구 강남대로점(XYZ 슈퍼)', 'district': '서초구', 'address': '서울특별시 서초구 강남대로 78길', 'image': 'images/xyz_logo.png', 'lat': 37.4940, 'lng': 127.0230}, 
+      {'bid': 1, 'name': '강남로데오점(XYZ 슈퍼)', 'district': '강남구', 'address': '서울특별시 강남구 논현로102길 3', 'image': 'images/xyz_logo.png', 'lat': 37.5255, 'lng': 127.0396},
+      {'bid': 2, 'name': '서초구 강남대로점(XYZ 슈퍼)', 'district': '서초구', 'address': '서울특별시 서초구 강남대로 78길', 'image': 'images/xyz_logo.png', 'lat': 37.4940, 'lng': 127.0230},
       {'bid': 3, 'name': '역삼점(XYZ 슈퍼)', 'district': '강남구', 'address': '서울특별시 강남구 역삼로 204', 'image': 'images/xyz_logo.png', 'lat': 37.4975, 'lng': 127.0345},
-      {'bid': 4, 'name': '논현역점(XYZ 슈퍼)', 'district': '강남구', 'address': '서울특별시 강남구 학동로 202', 'image': 'images/xyz_logo.png', 'lat': 37.5110, 'lng': 127.0215}, 
+      {'bid': 4, 'name': '논현역점(XYZ 슈퍼)', 'district': '강남구', 'address': '서울특별시 강남구 학동로 202', 'image': 'images/xyz_logo.png', 'lat': 37.5110, 'lng': 127.0215},
       {'bid': 5, 'name': '신사 가로수길점(XYZ 슈퍼)', 'district': '강남구', 'address': '서울특별시 강남구 강남대로152길 34', 'image': 'images/xyz_logo.png', 'lat': 37.5215, 'lng': 127.0219},
       {'bid': 6, 'name': '양재역점(XYZ 슈퍼)', 'district': '서초구', 'address': '서울특별시 서초구 남부순환로 2640', 'image': 'images/xyz_logo.png', 'lat': 37.4851, 'lng': 127.0347},
-      
       {'bid': 7, 'name': '강동 천호점(XYZ 슈퍼)', 'district': '강동구', 'address': '서울특별시 강동구 천호대로 1052', 'image': 'images/xyz_logo.png', 'lat': 37.5381, 'lng': 127.1265},
       {'bid': 8, 'name': '강북 미아점(XYZ 슈퍼)', 'district': '강북구', 'address': '서울특별시 강북구 도봉로 349', 'image': 'images/xyz_logo.png', 'lat': 37.6140, 'lng': 127.0315},
       {'bid': 9, 'name': '강서 마곡점(XYZ 슈퍼)', 'district': '강서구', 'address': '서울특별시 강서구 마곡중앙8로 149', 'image': 'images/xyz_logo.png', 'lat': 37.5615, 'lng': 126.8335},
@@ -105,21 +136,25 @@ class _GMapState extends State<GMap> {
       {'bid': 29, 'name': '중랑 상봉점(XYZ 슈퍼)', 'district': '중랑구', 'address': '서울특별시 중랑구 망우로 307', 'image': 'images/xyz_logo.png', 'lat': 37.5975, 'lng': 127.0950},
     ];
 
-    // 2. Map 데이터를 Branch 모델 리스트로 변환 (DB에 삽입하기 위해)
-    List<Branch> branchesToInsert = initialData.map((e) => Branch(
-      bid: e['bid'] as int,
-      blat: e['lat'] as double,
-      blng: e['lng'] as double,
-      bname: e['name'] as String,
-    )).toList();
-    
-    // 3. ⭐️ 테이블이 비어있을 때만 데이터를 삽입하는 함수 호출
+    // 2. Map -> Branch 리스트 변환
+    List<Branch> branchesToInsert = initialData
+        .map(
+          (e) => Branch(
+            bid: e['bid'] as int,
+            blat: e['lat'] as double,
+            blng: e['lng'] as double,
+            bname: e['name'] as String,
+          ),
+        )
+        .toList();
+
+    // 3. 테이블이 비어있을 때만 삽입
     await _branchDB.initializeBranchesIfEmpty(branchesToInsert);
-    
-    // 4. 화면에 표시할 리스트 업데이트 (mounted 체크 필수!)
-    if (mounted) { 
+
+    // 4. 화면 리스트 업데이트
+    if (mounted) {
       setState(() {
-        allStores = initialData; 
+        allStores = initialData;
       });
     }
   }
@@ -129,13 +164,13 @@ class _GMapState extends State<GMap> {
     final LatLng storeLocation = LatLng(lat, lng);
     return distance(gangnamStation, storeLocation).round();
   }
-  
+
   String _formatDistance(int meter) {
     if (meter < 1000) {
       return '${meter}m';
     } else {
       double km = meter / 1000.0;
-      return '${km.toStringAsFixed(1)}km'; 
+      return '${km.toStringAsFixed(1)}km';
     }
   }
 
@@ -143,16 +178,48 @@ class _GMapState extends State<GMap> {
     setState(() {
       _currentSearchQuery = _searchController.text.toLowerCase();
     });
+
+    // 지도 탭에서 검색 시, 첫 매장 기준으로 지도 이동 (옵션)
+    if (_currentTab == 1) {
+      final filteredStores = _getFilteredStores();
+      if (filteredStores.isNotEmpty) {
+        final store = filteredStores.first;
+        final lat = store['lat'] as double;
+        final lng = store['lng'] as double;
+        _mapController.move(LatLng(lat, lng), 13.0);
+      }
+    }
   }
 
-  // ⭐️ 오류 수정: 2개 인자만 받도록 변경
+  List<Map<String, dynamic>> _getFilteredStores() {
+    return allStores.where((store) {
+      final district = (store['district'] as String).toLowerCase();
+      final name = (store['name'] as String).toLowerCase();
+
+      bool dropdownMatch = _selectedDistrict == null ||
+          _selectedDistrict == '전체' ||
+          district.contains(_selectedDistrict!.toLowerCase());
+      bool searchMatch = _currentSearchQuery.isEmpty ||
+          district.contains(_currentSearchQuery) ||
+          name.contains(_currentSearchQuery);
+
+      return dropdownMatch && searchMatch;
+    }).toList();
+  }
+
+  // ⭐️ 선택된 매장의 위치 저장 + 지도 탭으로 전환 + 즉시 이동
   void _selectStoreAndMoveMap(double lat, double lng) {
     final LatLng selectedLocation = LatLng(lat, lng);
-    
+
     setState(() {
-      _currentTab = 1; 
+      _currentTab = 1;
+      _pendingCenter = selectedLocation;
     });
-    _mapController.move(selectedLocation, 14.0); 
+
+    // 지도는 이미 준비되어 있을 가능성이 크므로 바로 이동
+      if (_mapReady) {
+    _mapController.move(selectedLocation, 14.0);
+    }
   }
 
   void _showSelectionDialog(Map<String, dynamic> store) {
@@ -166,7 +233,10 @@ class _GMapState extends State<GMap> {
               children: <Widget>[
                 Text('${store['name']} (${store['district']})을(를) 선택하시겠습니까?'),
                 const SizedBox(height: 10),
-                Text('상세 주소: ${store['address']}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                Text(
+                  '상세 주소: ${store['address']}',
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
               ],
             ),
           ),
@@ -180,9 +250,30 @@ class _GMapState extends State<GMap> {
             TextButton(
               child: const Text('선택 및 지도 확인'),
               onPressed: () {
-                Navigator.of(context).pop(); 
-                // ⭐️ 오류 수정: 2개 인자만 전달
-                _selectStoreAndMoveMap(store['lat'] as double, store['lng'] as double);
+                Navigator.of(context).pop(); // 다이얼로그 닫기
+
+                // ✅ 1) 전역 컨트롤러에 선택 매장 저장
+                storeController.setStore(store);
+
+                // ✅ 2) 지도 이동 (너가 이미 만든 함수 사용)
+                _selectStoreAndMoveMap(
+                  store['lat'] as double,
+                  store['lng'] as double,
+                );
+
+                if (widget.popOnSelect) {
+                  // ✅ PayPage에서 호출된 경우: 매장 선택 후 바로 결과 반환
+                  Get.back(result: store);
+                } else {
+                  // ✅ 탭바 내에서 사용하는 경우: 지도 이동 + 하단 바에 표시
+                  setState(() {
+                    _selectedStore = store;
+                  });
+                  _selectStoreAndMoveMap(
+                    store['lat'] as double,
+                    store['lng'] as double,
+                  );
+                }
               },
             ),
           ],
@@ -190,44 +281,39 @@ class _GMapState extends State<GMap> {
       },
     );
   }
-  
+
   // --- 빌드 위젯 ---
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-            appBar: AppBar(
+      appBar: AppBar(
         title: Image.asset(
-          'images/xyz_logo.png', // 이미지 경로
+          'images/xyz_logo.png',
           height: 70,
           width: 70,
           fit: BoxFit.contain,
         ),
         actions: [
           IconButton(
-            onPressed: () {
-              //
-            },
-            icon: Icon(Icons.search),
+            onPressed: () {},
+            icon: const Icon(Icons.search),
           ),
           IconButton(
-            onPressed: () {
-              //
-            },
-            icon: Icon(Icons.notifications),
+            onPressed: () {},
+            icon: const Icon(Icons.notifications),
           ),
         ],
       ),
       body: SafeArea(
         child: Column(
           children: [
-            _buildHeader(), 
-            _buildSearchBar(), 
-            _buildTabBar(), 
+            _buildHeader(),
+            _buildSearchBar(),
+            _buildTabBar(),
             Expanded(
-              child: _currentTab == 0
-                  ? _buildListView() 
-                  : _buildMapView(), 
+              child: _currentTab == 0 ? _buildListView() : _buildMapView(),
             ),
+            if (_selectedStore != null) _buildSelectedStoreBar(), // ✅ 하단 고정 바
           ],
         ),
       ),
@@ -235,12 +321,13 @@ class _GMapState extends State<GMap> {
   }
 
   Widget _buildHeader() {
-     return Padding(
+    return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Column(
         children: [
           Container(
-            width: 40, height: 4,
+            width: 40,
+            height: 4,
             decoration: BoxDecoration(
               color: Colors.grey[300],
               borderRadius: BorderRadius.circular(2),
@@ -249,13 +336,16 @@ class _GMapState extends State<GMap> {
           const SizedBox(height: 10),
           const Text(
             '매장선택',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ],
       ),
     );
   }
-  
+
   Widget _buildSearchBar() {
     return Padding(
       padding: const EdgeInsets.all(15.0),
@@ -266,13 +356,15 @@ class _GMapState extends State<GMap> {
           borderRadius: BorderRadius.circular(10),
         ),
         child: TextField(
-          controller: _searchController, 
+          controller: _searchController,
           decoration: const InputDecoration(
             hintText: '매장을 검색해보세요 (예: 강남구)',
             border: InputBorder.none,
             icon: Icon(Icons.search, color: Colors.grey),
           ),
-          onSubmitted: (value) { _onSearchChanged(); },
+          onSubmitted: (value) {
+            _onSearchChanged();
+          },
         ),
       ),
     );
@@ -285,28 +377,43 @@ class _GMapState extends State<GMap> {
           mainAxisAlignment: MainAxisAlignment.start,
           children: [
             GestureDetector(
-              onTap: () => setState(() => _currentTab = 0),
+              onTap: () => setState(() {
+                _currentTab = 0;
+              }),
               child: Container(
-                padding: const EdgeInsets.only(top: 10, bottom: 8, left: 20, right: 30),
+                padding: const EdgeInsets.only(
+                  top: 10,
+                  bottom: 8,
+                  left: 20,
+                  right: 30,
+                ),
                 child: Text(
                   '목록',
                   style: TextStyle(
                     fontSize: 16,
-                    fontWeight: _currentTab == 0 ? FontWeight.bold : FontWeight.normal,
+                    fontWeight:
+                        _currentTab == 0 ? FontWeight.bold : FontWeight.normal,
                     color: _currentTab == 0 ? Colors.black : Colors.grey[600],
                   ),
                 ),
               ),
             ),
             GestureDetector(
-              onTap: () => setState(() => _currentTab = 1),
+              onTap: () => setState(() {
+                _currentTab = 1;
+              }),
               child: Container(
-                padding: const EdgeInsets.only(top: 10, bottom: 8, right: 20),
+                padding: const EdgeInsets.only(
+                  top: 10,
+                  bottom: 8,
+                  right: 20,
+                ),
                 child: Text(
                   '지도',
                   style: TextStyle(
                     fontSize: 16,
-                    fontWeight: _currentTab == 1 ? FontWeight.bold : FontWeight.normal,
+                    fontWeight:
+                        _currentTab == 1 ? FontWeight.bold : FontWeight.normal,
                     color: _currentTab == 1 ? Colors.black : Colors.grey[600],
                   ),
                 ),
@@ -316,11 +423,15 @@ class _GMapState extends State<GMap> {
         ),
         Stack(
           children: [
-            Container(height: 1, color: Colors.grey[300]),
+            Container(
+              height: 1,
+              color: Colors.grey[300],
+            ),
             AnimatedContainer(
               duration: const Duration(milliseconds: 200),
-              margin: EdgeInsets.only(left: _currentTab == 0 ? 20 : 80), 
-              width: 40, height: 2,
+              margin: EdgeInsets.only(left: _currentTab == 0 ? 20 : 80),
+              width: 40,
+              height: 2,
               color: Colors.black,
             ),
           ],
@@ -330,29 +441,19 @@ class _GMapState extends State<GMap> {
   }
 
   Widget _buildListView() {
-    // allStores가 비어있다면 로딩 중 표시
     if (allStores.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }
-    
-    // 1. 필터링 로직
-    final filteredStores = allStores.where((store) {
-      final district = (store['district'] as String).toLowerCase();
-      final name = (store['name'] as String).toLowerCase();
-      
-      bool dropdownMatch = _selectedDistrict == null || _selectedDistrict == '전체' || district.contains(_selectedDistrict!.toLowerCase());
-      bool searchMatch = _currentSearchQuery.isEmpty || district.contains(_currentSearchQuery) || name.contains(_currentSearchQuery);
 
-      return dropdownMatch && searchMatch;
-    }).toList();
+    final filteredStores = _getFilteredStores();
 
-    // 2. 거리순 정렬
     filteredStores.sort((a, b) {
-      final distA = _calculateDistanceInMeters(a['lat'] as double, a['lng'] as double);
-      final distB = _calculateDistanceInMeters(b['lat'] as double, b['lng'] as double);
-      return distA.compareTo(distB); 
+      final distA =
+          _calculateDistanceInMeters(a['lat'] as double, a['lng'] as double);
+      final distB =
+          _calculateDistanceInMeters(b['lat'] as double, b['lng'] as double);
+      return distA.compareTo(distB);
     });
-
 
     return SingleChildScrollView(
       child: Padding(
@@ -365,27 +466,25 @@ class _GMapState extends State<GMap> {
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 10),
-            
-            _buildDistrictDropdown(), 
-            
+            _buildDistrictDropdown(),
             const SizedBox(height: 20),
-
-            Text(
+            const Text(
               '가까운 매장 (거리순 정렬 / 기준: 강남역)',
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 15),
-
-            // 필터링 및 정렬된 매장 목록 빌드
             ...filteredStores.map((store) {
-              final int meter = _calculateDistanceInMeters(store['lat'] as double, store['lng'] as double);
+              final int meter = _calculateDistanceInMeters(
+                store['lat'] as double,
+                store['lng'] as double,
+              );
               final String formattedDistance = _formatDistance(meter);
-              
+
               return _buildStoreCard(
-                store: store, 
+                store: store,
                 name: store['name'] as String,
-                address: store['district'] as String, 
-                distance: formattedDistance, 
+                address: store['district'] as String,
+                distance: formattedDistance,
                 imagePath: store['image'] as String,
               );
             }).toList(),
@@ -406,7 +505,7 @@ class _GMapState extends State<GMap> {
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
-          value: _selectedDistrict ?? '전체', 
+          value: _selectedDistrict ?? '전체',
           isExpanded: true,
           icon: const Icon(Icons.arrow_drop_down),
           style: const TextStyle(color: Colors.black, fontSize: 16),
@@ -416,6 +515,18 @@ class _GMapState extends State<GMap> {
               _searchController.clear();
               _currentSearchQuery = '';
             });
+
+            // 지도 탭에서 구 변경 시, 해당 구 중심으로 이동
+            if (_currentTab == 1) {
+              if (newValue != null && newValue != '전체') {
+                final center = seoulDistrictCenters[newValue];
+                if (center != null) {
+                  _mapController.move(center, 12.0);
+                }
+              } else {
+                _mapController.move(const LatLng(37.5665, 126.9780), 10.5);
+              }
+            }
           },
           items: items.map<DropdownMenuItem<String>>((String value) {
             return DropdownMenuItem<String>(
@@ -429,51 +540,68 @@ class _GMapState extends State<GMap> {
   }
 
   Widget _buildStoreCard({
-    required Map<String, dynamic> store, 
+    required Map<String, dynamic> store,
     required String name,
-    required String address, 
+    required String address,
     required String distance,
     required String imagePath,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 15.0),
       child: Card(
-        elevation: 3, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        elevation: 3,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         child: ListTile(
           contentPadding: const EdgeInsets.all(15),
-          title: Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          title: Text(
+            name,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
           subtitle: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(address, style: const TextStyle(color: Colors.grey)), 
+              Text(address, style: const TextStyle(color: Colors.grey)),
               const SizedBox(height: 5),
-              Text(distance, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+              Text(
+                distance,
+                style:
+                    const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              ),
             ],
           ),
-          trailing: Image.asset(imagePath, width: 50, height: 50, fit: BoxFit.contain),
-          onTap: () { 
+          trailing: Image.asset(
+            imagePath,
+            width: 50,
+            height: 50,
+            fit: BoxFit.contain,
+          ),
+          onTap: () {
             _showSelectionDialog(store);
           },
         ),
       ),
     );
   }
-  
+
   Widget _buildMapView() {
-    // 매장 데이터에서 마커 리스트 생성
     List<Marker> markers = allStores.map((store) {
       return Marker(
-        point: LatLng(store['lat'] as double, store['lng'] as double), 
-        width: 100, height: 50,
+        point: LatLng(store['lat'] as double, store['lng'] as double),
+        width: 100,
+        height: 50,
         child: Column(
           children: [
-            // 마커 텍스트 (매장 이름)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-              decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(4)),
-              child: Text(store['district'] as String, style: const TextStyle(color: Colors.white, fontSize: 10)),
+              decoration: BoxDecoration(
+                color: Colors.black,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                store['district'] as String,
+                style: const TextStyle(color: Colors.white, fontSize: 10),
+              ),
             ),
-            // 마커 아이콘
             const Icon(Icons.location_on, color: Colors.red, size: 25),
           ],
         ),
@@ -481,13 +609,19 @@ class _GMapState extends State<GMap> {
     }).toList();
 
     return FlutterMap(
-      mapController: _mapController, 
-      options: const MapOptions(
-        initialCenter: LatLng(37.5665, 126.9780), // 서울 중심
-        initialZoom: 10.5, 
-        interactionOptions: InteractionOptions(
-          flags: InteractiveFlag.all & ~InteractiveFlag.rotate, 
+      mapController: _mapController,
+      options: MapOptions(
+        initialCenter: const LatLng(37.5665, 126.9780),
+        initialZoom: 10.5,
+        interactionOptions: const InteractionOptions(
+          flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
         ),
+        onMapReady: () {
+          _mapReady = true; 
+          if (_pendingCenter != null) {
+            _mapController.move(_pendingCenter!, 14.0);
+          }
+        },
       ),
       children: [
         TileLayer(
@@ -496,6 +630,42 @@ class _GMapState extends State<GMap> {
         ),
         MarkerLayer(markers: markers),
       ],
+    );
+  }
+
+  // ✅ 하단 선택 매장 바
+  Widget _buildSelectedStoreBar() {
+    if (StoreSelection.selectedStoreName == null) return SizedBox();
+
+    return Container(
+      height: 55,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      margin: const EdgeInsets.only(bottom: 65), // 탭바 위
+      child: Row(
+        children: [
+          // 좌측 영역
+          Expanded(
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.black,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                StoreSelection.selectedStoreName!,
+                style: TextStyle(color: Colors.white, fontSize: 14),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ),
+
+          // 👉 중앙 FloatingActionButton 공간 확보
+          SizedBox(width: 70),
+
+          // 우측 여유 공간 (필요하면 숨길 수 있음)
+          Expanded(child: SizedBox()),
+        ],
+      ),
     );
   }
 }

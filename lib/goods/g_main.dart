@@ -1,4 +1,4 @@
-// lib/g_main.dart 파일 전체 내용
+// lib/goods/g_main.dart
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -6,7 +6,7 @@ import 'package:xyz_project_01/insert/goods_detail_page.dart';
 import 'package:xyz_project_01/model/goods.dart';
 import 'package:xyz_project_01/vm/database/goods_database.dart';
 import 'dart:math';
-import 'dart:typed_data'; // Uint8List 사용을 위해 추가
+import 'dart:typed_data';
 
 class GMain extends StatefulWidget {
   final String userid;
@@ -21,23 +21,25 @@ class _GMainState extends State<GMain> {
     viewportFraction: 0.85,
   );
   int _currentPage = 0;
-  
-  // DB에서 불러올 실제 상품 리스트 (대표 상품만 포함)
+
+  // 대표 상품 리스트
   List<Goods> recommendedGoods = []; // 오늘의 추천 (슬라이더)
   List<Goods> popularGoods = [];     // 인기 상품 (가로 스크롤)
   List<Goods> recentGoods = [];      // 최근 본 상품 (가로 스크롤)
-  
-  // 로딩 상태 변수
+
   bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadGoodsData(); 
-    
+    _loadGoodsData();
+
     _pageController.addListener(() {
-      int next = _pageController.page!.round();
-      if (_currentPage != next) {
+      final page = _pageController.page;
+      if (page == null) return;
+
+      int next = page.round();
+      if (_currentPage != next && mounted) {
         setState(() {
           _currentPage = next;
         });
@@ -45,66 +47,74 @@ class _GMainState extends State<GMain> {
     });
   }
 
-  // ⭐️⭐️⭐️ _loadGoodsData 함수: 상품 그룹별 추출 및 섹션별 중복 추출 허용 ⭐️⭐️⭐️
+  // 상품 데이터 로드
   Future<void> _loadGoodsData() async {
-    final goodsDB = GoodsDatabase();
-    final all = await goodsDB.queryGoods();
-    
-    print("====================================");
-    print("DB에서 불러온 전체 상품 수 (옵션 포함): ${all.length}"); 
-    
-    if (all.isNotEmpty) {
-      // 1. GNAME별로 그룹화하고, 각 그룹의 첫 번째 항목만 추출 (대표 상품)
-      final Map<String, Goods> uniqueGoodsMap = {};
-      
-      for (var goods in all) {
-        if (!uniqueGoodsMap.containsKey(goods.gname)) {
-          uniqueGoodsMap[goods.gname] = goods;
+    try {
+      final goodsDB = GoodsDatabase();
+      final all = await goodsDB.queryGoods();
+
+      print("====================================");
+      print("DB에서 불러온 전체 상품 수 (옵션 포함): ${all.length}");
+
+      if (all.isNotEmpty) {
+        // 1. GNAME별로 그룹화해서 첫 번째 항목만 대표로 사용
+        final Map<String, Goods> uniqueGoodsMap = {};
+        for (var goods in all) {
+          if (!uniqueGoodsMap.containsKey(goods.gname)) {
+            uniqueGoodsMap[goods.gname] = goods;
+          }
         }
-      }
-      
-      // 2. 대표 상품 리스트 생성
-      List<Goods> representativeGoods = uniqueGoodsMap.values.toList();
-      final int totalCount = representativeGoods.length;
-      
-      // 상품 그룹이 없다면 로딩 해제 후 종료
-      if (totalCount == 0) {
+
+        List<Goods> representativeGoods = uniqueGoodsMap.values.toList();
+        final int totalCount = representativeGoods.length;
+
+        if (totalCount == 0) {
+          if (!mounted) return;
           setState(() {
             isLoading = false;
           });
           print("Error: 대표 상품 그룹이 없습니다.");
           print("====================================");
           return;
+        }
+
+        // 2. 섹션별 랜덤 추출 (겹침 허용)
+        representativeGoods.shuffle(Random());
+        final rec = representativeGoods.take(min(4, totalCount)).toList();
+
+        representativeGoods.shuffle(Random());
+        final pop = representativeGoods.take(min(5, totalCount)).toList();
+
+        representativeGoods.shuffle(Random());
+        final recent = representativeGoods.take(min(5, totalCount)).toList();
+
+        if (!mounted) return;
+        setState(() {
+          recommendedGoods = rec;
+          popularGoods = pop;
+          recentGoods = recent;
+          isLoading = false;
+        });
+
+        print("✅ 대표 상품 그룹 로드 성공. 총 그룹 수: $totalCount");
+        print("✅ 섹션별 중복 추출 완료.");
+        print("====================================");
+      } else {
+        if (!mounted) return;
+        setState(() {
+          isLoading = false;
+        });
+        print("Error: 상품 데이터가 DB에 없어 로딩을 해제합니다.");
+        print("====================================");
       }
-      
-      // 3. 섹션별로 독립적으로 무작위 추출 및 할당 (겹침 허용)
-      
-      // '오늘의 추천' (슬라이더, 최대 4개)
-      representativeGoods.shuffle(Random()); 
-      recommendedGoods = representativeGoods.take(min(4, totalCount)).toList();
-
-      // '인기 상품' (가로 스크롤, 최대 5개)
-      representativeGoods.shuffle(Random()); 
-      popularGoods = representativeGoods.take(min(5, totalCount)).toList();
-
-      // '최근 본 상품' (가로 스크롤, 최대 5개)
-      representativeGoods.shuffle(Random()); 
-      recentGoods = representativeGoods.take(min(5, totalCount)).toList();
-      
-      
-      print("✅ 대표 상품 그룹 로드 성공. 총 그룹 수: $totalCount");
-      print("✅ 섹션별 중복 추출 완료.");
-      print("====================================");
-      
+    } catch (e, st) {
+      // ❗ 여기서 에러만 찍고 앱이 죽지 않게 막음
+      print("GMain _loadGoodsData 에러: $e");
+      print(st);
+      if (!mounted) return;
       setState(() {
         isLoading = false;
       });
-    } else {
-      setState(() {
-        isLoading = false;
-      });
-      print("Error: 상품 데이터가 DB에 없어 로딩을 해제합니다.");
-      print("====================================");
     }
   }
 
@@ -116,7 +126,6 @@ class _GMainState extends State<GMain> {
 
   @override
   Widget build(BuildContext context) {
-    // 로딩 화면
     if (isLoading) {
       return const Scaffold(
         body: Center(
@@ -124,42 +133,33 @@ class _GMainState extends State<GMain> {
         ),
       );
     }
-    
+
     return Scaffold(
       appBar: AppBar(
         title: Image.asset(
-          'images/xyz_logo.png', // 이미지 경로
+          'images/xyz_logo.png',
           height: 70,
           width: 70,
           fit: BoxFit.contain,
         ),
         actions: [
           IconButton(
-            onPressed: () {
-              //
-            },
+            onPressed: () {},
             icon: const Icon(Icons.search),
           ),
           IconButton(
-            onPressed: () {
-              //
-            },
+            onPressed: () {},
             icon: const Icon(Icons.notifications),
           ),
         ],
       ),
-
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: 20),
-
-            // 1. 섹션 타이틀 ('오늘의 추천')
+            // 오늘의 추천 타이틀
             const Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: 20.0,
-              ),
+              padding: EdgeInsets.fromLTRB(20, 20, 0, 15),
               child: Text(
                 "오늘의 추천 🔥",
                 style: TextStyle(
@@ -168,32 +168,24 @@ class _GMainState extends State<GMain> {
                 ),
               ),
             ),
-            const SizedBox(height: 15),
 
-            // 2. 슬라이드 및 버튼 영역 (Stack을 사용하여 겹치기)
+            // 슬라이드 카드 + 화살표 버튼
             SizedBox(
-              height: 320, // 카드의 높이 지정
+              height: 320,
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  // A. 실제 슬라이더 (PageView)
                   PageView.builder(
                     controller: _pageController,
-                    itemCount: recommendedGoods.length, 
+                    itemCount: recommendedGoods.length,
                     itemBuilder: (context, index) {
-                      return _buildShoeCard(
-                        recommendedGoods[index], 
-                      );
+                      return _buildShoeCard(recommendedGoods[index]);
                     },
                   ),
-
-                  // B. 다음 페이지 버튼 (>)
                   Positioned(
                     right: 15,
                     child: IconButton(
-                      icon: const Icon(
-                        Icons.arrow_forward_ios,
-                      ),
+                      icon: const Icon(Icons.arrow_forward_ios),
                       iconSize: 30,
                       color: Colors.black,
                       style: IconButton.styleFrom(
@@ -207,30 +199,22 @@ class _GMainState extends State<GMain> {
                 ],
               ),
             ),
-            const SizedBox(height: 15),
 
-            // 3. 페이지 인디케이터 (슬라이더 바)
+            // 인디케이터
             Padding(
-              padding: const EdgeInsets.only(
-                left: 20.0,
-              ), // 왼쪽으로 정렬
+              padding: const EdgeInsets.fromLTRB(20, 15, 0, 30),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.start,
                 children: List.generate(
-                  recommendedGoods.length, 
-                  (index) => _buildIndicator(
-                    index == _currentPage,
-                  ),
+                  recommendedGoods.length,
+                  (index) => _buildIndicator(index == _currentPage),
                 ),
               ),
             ),
 
-            const SizedBox(height: 30),
-            // 4. 섹션 타이틀 ('인기 상품')
+            // 인기 상품 타이틀
             const Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: 20.0,
-              ),
+              padding: EdgeInsets.fromLTRB(20, 0, 0, 15),
               child: Text(
                 "인기 상품 🏆",
                 style: TextStyle(
@@ -239,31 +223,23 @@ class _GMainState extends State<GMain> {
                 ),
               ),
             ),
-            const SizedBox(height: 15),
 
-            // 5. 인기 상품 가로 스크롤 섹션
+            // 인기 상품 가로 스크롤
             SizedBox(
               height: 220,
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                ),
-                itemCount: popularGoods.length, 
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                itemCount: popularGoods.length,
                 itemBuilder: (context, index) {
-                  return _buildPopularItemCard(
-                    popularGoods[index], 
-                  );
+                  return _buildPopularItemCard(popularGoods[index]);
                 },
               ),
             ),
 
-            const SizedBox(height: 30),
-            // 6. 섹션 타이틀 ('최근 본 상품')
+            // 최근 본 상품 타이틀
             const Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: 20.0,
-              ),
+              padding: EdgeInsets.fromLTRB(20, 30, 0, 15),
               child: Text(
                 "최근 본 상품 📍",
                 style: TextStyle(
@@ -272,45 +248,43 @@ class _GMainState extends State<GMain> {
                 ),
               ),
             ),
-            const SizedBox(height: 15),
 
-            // 7. 최근 본 상품 가로 스크롤 섹션
-            SizedBox(
-              height: 220,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
+            // 최근 본 상품 가로 스크롤
+            Padding(
+              padding: const EdgeInsets.only(bottom: 40),
+              child: SizedBox(
+                height: 220,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  itemCount: recentGoods.length,
+                  itemBuilder: (context, index) {
+                    return _buildPopularItemCard(recentGoods[index]);
+                  },
                 ),
-                itemCount: recentGoods.length, 
-                itemBuilder: (context, index) {
-                  return _buildPopularItemCard(
-                    recentGoods[index], 
-                  );
-                },
               ),
             ),
-            const SizedBox(height: 40), 
           ],
         ),
       ),
     );
   }
 
-  // ⭐️ _buildShoeCard 함수: 가격 고정 및 이미지 처리 ⭐️
+  // 메인 슬라이더 카드
   Widget _buildShoeCard(Goods goods) {
     return GestureDetector(
       onTap: () {
-        Get.to(GoodsDetailPage(goods: goods, userid: widget.userid,));
+        Get.to(
+          () => GoodsDetailPage(goods: goods, userid: widget.userid),
+        );
       },
       child: Container(
-        margin: const EdgeInsets.symmetric(
-          horizontal: 10,
-        ),
+        margin: const EdgeInsets.symmetric(horizontal: 10),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
+            // 🔴 withValues → ✅ withOpacity 로 변경
             BoxShadow(
               color: Colors.black.withOpacity(0.1),
               blurRadius: 10,
@@ -321,7 +295,7 @@ class _GMainState extends State<GMain> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 신발 이미지 영역 (DB에서 불러온 이미지 사용)
+            // 이미지
             Expanded(
               child: ClipRRect(
                 borderRadius: const BorderRadius.vertical(
@@ -329,11 +303,11 @@ class _GMainState extends State<GMain> {
                 ),
                 child: goods.mainimage != null && goods.mainimage is Uint8List
                     ? Image.memory(
-                        goods.mainimage!, 
+                        goods.mainimage!,
                         width: double.infinity,
                         fit: BoxFit.cover,
                       )
-                    : const Center( 
+                    : const Center(
                         child: Icon(
                           Icons.image_not_supported,
                           color: Colors.grey,
@@ -341,16 +315,14 @@ class _GMainState extends State<GMain> {
                       ),
               ),
             ),
-
-            // 텍스트 정보 영역 (Goods 객체의 실제 정보 사용)
+            // 텍스트 정보
             Padding(
               padding: const EdgeInsets.all(15.0),
               child: Column(
-                crossAxisAlignment:
-                    CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    goods.gcategory, // 카테고리 사용
+                    goods.gcategory,
                     style: const TextStyle(
                       color: Colors.grey,
                       fontSize: 12,
@@ -359,7 +331,7 @@ class _GMainState extends State<GMain> {
                   ),
                   const SizedBox(height: 5),
                   Text(
-                    goods.gname, // 제품명 사용
+                    goods.gname,
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -368,9 +340,8 @@ class _GMainState extends State<GMain> {
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 5),
-                  // 금액 표시: "150,000원"으로 고정
                   const Text(
-                    "150,000원", 
+                    "150,000원",
                     style: TextStyle(
                       fontSize: 16,
                       color: Colors.blueAccent,
@@ -386,22 +357,24 @@ class _GMainState extends State<GMain> {
     );
   }
 
-  // ⭐️ _buildPopularItemCard 함수: 가격 고정 및 이미지 처리 ⭐️
+  // 인기/최근 상품 카드
   Widget _buildPopularItemCard(Goods goods) {
     const double cardWidth = 150;
     const double imageBoxHeight = 120;
 
     return GestureDetector(
       onTap: () {
-        Get.to(GoodsDetailPage(goods: goods, userid: widget.userid,));
+        Get.to(
+          () => GoodsDetailPage(goods: goods, userid: widget.userid),
+        );
       },
       child: Container(
         width: cardWidth,
-        margin: const EdgeInsets.only(right: 15), // 카드 간 간격
+        margin: const EdgeInsets.only(right: 15),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 1. 이미지 박스 (DB에서 불러온 이미지 사용)
+            // 이미지 박스
             Container(
               height: imageBoxHeight,
               width: cardWidth,
@@ -413,7 +386,7 @@ class _GMainState extends State<GMain> {
                 borderRadius: BorderRadius.circular(10),
                 child: goods.mainimage != null && goods.mainimage is Uint8List
                     ? Image.memory(
-                        goods.mainimage!, 
+                        goods.mainimage!,
                         fit: BoxFit.cover,
                       )
                     : const Center(
@@ -425,19 +398,19 @@ class _GMainState extends State<GMain> {
               ),
             ),
             const SizedBox(height: 8),
-
-            // 2. 텍스트 정보
             Text(
-              goods.gengname, // 영문명(브랜드 역할로 가정) 사용
+              goods.gengname,
               style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
                 color: Colors.black,
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 2),
             Text(
-              goods.gname, // 제품명 사용
+              goods.gname,
               style: TextStyle(
                 fontSize: 12,
                 color: Colors.grey[600],
@@ -445,9 +418,8 @@ class _GMainState extends State<GMain> {
               overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 5),
-            // 금액 표시: "150,000원"으로 고정
             const Text(
-              "150,000원", 
+              "150,000원",
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
@@ -459,33 +431,31 @@ class _GMainState extends State<GMain> {
       ),
     );
   }
-  
-  // _GMainState 클래스 내부
-  // 페이지 인디케이터 동그라미 위젯
+
+  // 인디케이터
   Widget _buildIndicator(bool isActive) {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 150),
       margin: const EdgeInsets.symmetric(horizontal: 4.0),
       height: 8.0,
-      width: isActive ? 24.0 : 8.0, // 활성화된 동그라미는 길쭉하게
+      width: isActive ? 24.0 : 8.0,
       decoration: BoxDecoration(
-        color: isActive
-            ? Colors.black
-            : Colors.grey.shade400,
+        color: isActive ? Colors.black : Colors.grey.shade400,
         borderRadius: BorderRadius.circular(4),
       ),
     );
   }
 
-  // 다음 페이지로 이동하는 함수
+  // 다음 페이지로 이동
   void _nextPage() {
+    if (recommendedGoods.isEmpty) return;
+
     if (_currentPage < recommendedGoods.length - 1) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 400),
         curve: Curves.easeOut,
       );
     } else {
-      // 마지막 페이지라면 첫 페이지로 순환
       _pageController.animateToPage(
         0,
         duration: const Duration(milliseconds: 400),

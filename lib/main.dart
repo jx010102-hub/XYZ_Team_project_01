@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:xyz_project_01/controller/store_controller.dart';
 import 'package:xyz_project_01/customer/c_login.dart';
 import 'package:xyz_project_01/vm/database/seed_data.dart'; // SeedData import
 
@@ -10,6 +11,7 @@ void main() async {
   final seed = SeedData();
   await seed.insertExampleData();
   
+  Get.put(StoreController(), permanent: true);
   runApp(const MyApp());
 }
 
