@@ -13,6 +13,21 @@ class GoodsDatabase {
     return queryResults.map((e) => Goods.fromMap(e)).toList();
   }
 
+  // 빠른 검색
+  Future<List<Goods>> queryRepresentativeGoods() async {
+  final Database db = await handler.initializeDB();
+  final result = await db.rawQuery('''
+    select *
+    from goods
+    where gseq in (
+      select min(gseq)
+      from goods
+      group by gname
+    )
+  ''');
+  return result.map((e) => Goods.fromMap(e)).toList();
+  }
+
   // 중복 체크
   Future<bool> existsGoods({
     required String gname,

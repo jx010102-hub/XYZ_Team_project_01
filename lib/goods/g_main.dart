@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:xyz_project_01/insert/goods_detail_page.dart';
 import 'package:xyz_project_01/model/goods.dart';
-import 'package:xyz_project_01/vm/database/goods_database.dart';
+import 'package:xyz_project_01/repository/goods_repository.dart';
 import 'dart:math';
 import 'dart:typed_data';
 
@@ -16,7 +16,8 @@ class GMain extends StatefulWidget {
   State<GMain> createState() => _GMainState();
 }
 
-class _GMainState extends State<GMain> {
+class _GMainState extends State<GMain> with AutomaticKeepAliveClientMixin {
+  
   final PageController _pageController = PageController(
     viewportFraction: 0.85,
   );
@@ -47,76 +48,37 @@ class _GMainState extends State<GMain> {
     });
   }
 
-  // 상품 데이터 로드
   Future<void> _loadGoodsData() async {
-    try {
-      final goodsDB = GoodsDatabase();
-      final all = await goodsDB.queryGoods();
+    // 1. 원본 리스트 가져오기
+    final original = await GoodsRepository.getRepresentativeGoods();
+    final totalCount = original.length;
 
-      print("====================================");
-      print("DB에서 불러온 전체 상품 수 (옵션 포함): ${all.length}");
-
-      if (all.isNotEmpty) {
-        // 1. GNAME별로 그룹화해서 첫 번째 항목만 대표로 사용
-        final Map<String, Goods> uniqueGoodsMap = {};
-        for (var goods in all) {
-          if (!uniqueGoodsMap.containsKey(goods.gname)) {
-            uniqueGoodsMap[goods.gname] = goods;
-          }
-        }
-
-        List<Goods> representativeGoods = uniqueGoodsMap.values.toList();
-        final int totalCount = representativeGoods.length;
-
-        if (totalCount == 0) {
-          if (!mounted) return;
-          setState(() {
-            isLoading = false;
-          });
-          print("Error: 대표 상품 그룹이 없습니다.");
-          print("====================================");
-          return;
-        }
-
-        // 2. 섹션별 랜덤 추출 (겹침 허용)
-        representativeGoods.shuffle(Random());
-        final rec = representativeGoods.take(min(4, totalCount)).toList();
-
-        representativeGoods.shuffle(Random());
-        final pop = representativeGoods.take(min(5, totalCount)).toList();
-
-        representativeGoods.shuffle(Random());
-        final recent = representativeGoods.take(min(5, totalCount)).toList();
-
-        if (!mounted) return;
-        setState(() {
-          recommendedGoods = rec;
-          popularGoods = pop;
-          recentGoods = recent;
-          isLoading = false;
-        });
-
-        print("✅ 대표 상품 그룹 로드 성공. 총 그룹 수: $totalCount");
-        print("✅ 섹션별 중복 추출 완료.");
-        print("====================================");
-      } else {
-        if (!mounted) return;
-        setState(() {
-          isLoading = false;
-        });
-        print("Error: 상품 데이터가 DB에 없어 로딩을 해제합니다.");
-        print("====================================");
-      }
-    } catch (e, st) {
-      // ❗ 여기서 에러만 찍고 앱이 죽지 않게 막음
-      print("GMain _loadGoodsData 에러: $e");
-      print(st);
-      if (!mounted) return;
-      setState(() {
-        isLoading = false;
-      });
+    if (totalCount == 0) {
+      setState(() => isLoading = false);
+      return;
     }
+
+    // 2. 매번 섹션마다 복사본 만들어서 shuffle
+    List<Goods> temp;
+
+    // 오늘의 추천
+    temp = List<Goods>.from(original);
+    temp.shuffle();
+    recommendedGoods = temp.take(min(4, totalCount)).toList();
+
+    // 인기 상품
+    temp = List<Goods>.from(original);
+    temp.shuffle();
+    popularGoods = temp.take(min(5, totalCount)).toList();
+
+    // 최근 본 상품
+    temp = List<Goods>.from(original);
+    temp.shuffle();
+    recentGoods = temp.take(min(5, totalCount)).toList();
+
+    setState(() => isLoading = false);
   }
+
 
   @override
   void dispose() {
@@ -125,7 +87,11 @@ class _GMainState extends State<GMain> {
   }
 
   @override
+  bool get wantKeepAlive => true;
+
+  @override
   Widget build(BuildContext context) {
+    super.build(context);
     if (isLoading) {
       return const Scaffold(
         body: Center(
@@ -284,7 +250,6 @@ class _GMainState extends State<GMain> {
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
-            // 🔴 withValues → ✅ withOpacity 로 변경
             BoxShadow(
               color: Colors.black.withOpacity(0.1),
               blurRadius: 10,
