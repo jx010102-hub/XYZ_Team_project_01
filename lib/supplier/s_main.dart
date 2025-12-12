@@ -1,16 +1,128 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:intl/intl.dart';
+
+import 'package:xyz_project_01/model/supply_order.dart';
+import 'package:xyz_project_01/vm/database/supply_order_database.dart';
 
 class SMain extends StatefulWidget {
+  // ✅ 여기 sid는 "제조사 이름"으로 들어오는 걸로 통일 (SLogin에서 name 넘김)
   final String sid;
-  const SMain({super.key, required this.sid});
-
+  final String sname;
+  const SMain({super.key, required this.sid, required this.sname});
+  
   @override
   State<SMain> createState() => _SMainState();
 }
 
 class _SMainState extends State<SMain> {
+  final SupplyOrderDatabase _orderDB = SupplyOrderDatabase();
+
+  bool _isLoading = true;
+  bool _isApproving = false;
+
+  List<SupplyOrder> _pendingOrders = [];
+  final Set<int> _selectedOseqs = {}; // 체크된 발주들
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchOrders();
+  }
+
+  Future<void> _fetchOrders() async {
+    setState(() => _isLoading = true);
+    try {
+      final list = await _orderDB.queryPendingByManufacturer(widget.sname.trim());
+      if (!mounted) return;
+      setState(() {
+        _pendingOrders = list;
+        _selectedOseqs.clear();
+      });
+    } catch (e) {
+      if (!mounted) return;
+      Get.snackbar(
+        '오류',
+        '발주 목록을 불러오지 못했습니다: $e',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _toggleSelect(int oseq) {
+    setState(() {
+      if (_selectedOseqs.contains(oseq)) {
+        _selectedOseqs.remove(oseq);
+      } else {
+        _selectedOseqs.add(oseq);
+      }
+    });
+  }
+
+  Future<void> _approveSelected() async {
+    if (_isApproving) return;
+
+    if (_selectedOseqs.isEmpty) {
+      Get.snackbar(
+        '안내',
+        '승인할 요청을 선택해줘',
+        backgroundColor: Colors.black,
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    setState(() => _isApproving = true);
+
+    final String apprdate =
+        DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now());
+
+    int success = 0;
+    try {
+      for (final oseq in _selectedOseqs) {
+        final r = await _orderDB.approveOrder(oseq, apprdate);
+        if (r > 0) success++;
+      }
+
+      if (!mounted) return;
+
+      if (success > 0) {
+        Get.snackbar(
+          '완료',
+          '승인 완료됨 ($success건)',
+          backgroundColor: Colors.green,
+          colorText: Colors.white,
+        );
+      } else {
+        Get.snackbar(
+          '실패',
+          '승인 처리에 실패함',
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+      }
+
+      await _fetchOrders();
+    } catch (e) {
+      if (!mounted) return;
+      Get.snackbar(
+        '오류',
+        '승인 처리 중 오류: $e',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    } finally {
+      if (mounted) setState(() => _isApproving = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final int totalCount = _pendingOrders.length;
+
     return Scaffold(
       appBar: AppBar(
         title: Image.asset(
@@ -33,92 +145,231 @@ class _SMainState extends State<SMain> {
       body: SafeArea(
         child: Column(
           children: [
+            // ✅ 드롭다운 제거 → 텍스트로 고정 표시(구분 불필요)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade200,
-                  borderRadius: BorderRadius.circular(30),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      '승인요청',
-                      style: TextStyle(fontSize: 15),
-                    ),
-                    Icon(Icons.arrow_drop_down),
-                  ],
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 6, 20, 6),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 10),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                     decoration: BoxDecoration(
                       color: Colors.grey.shade200,
                       borderRadius: BorderRadius.circular(30),
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text('모든매장', style: TextStyle(fontSize: 14)),
-                        Icon(Icons.arrow_drop_down),
-                      ],
+                    child: const Text(
+                      '승인요청',
+                      style: TextStyle(fontSize: 15),
                     ),
                   ),
-                  Padding(
-                    padding: const EdgeInsets.only(left: 12),
+
+                  // ✅ 제조사 이름 표시
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade200,
+                      borderRadius: BorderRadius.circular(30),
+                    ),
                     child: Text(
-                      '총 0건',
-                      style: TextStyle(fontSize: 14),
+                      widget.sid,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
+
             Padding(
-              padding: const EdgeInsets.only(top: 30),
-              child: Container(
-                width: MediaQuery.of(context).size.width,
-                height: 400,
-                padding: const EdgeInsets.symmetric(vertical: 40),
-                color: Colors.grey.shade300,
-                child: Expanded(
-                  child: Center(
-                    child: Text(
-                      "승인 요청이 없습니다.",
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.black54,
-                      ),
+              padding: const EdgeInsets.fromLTRB(20, 6, 20, 6),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // ✅ “모든매장” 드롭다운 제거 → 텍스트로 고정
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade200,
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    child: const Text(
+                      '전체 요청',
+                      style: TextStyle(fontSize: 14),
                     ),
                   ),
+
+                  Row(
+                    children: [
+                      Text(
+                        '총 $totalCount건',
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                      IconButton(
+                        onPressed: _isLoading ? null : _fetchOrders,
+                        icon: const Icon(Icons.refresh),
+                        tooltip: '새로고침',
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            // 목록 영역
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.only(top: 10),
+                child: Container(
+                  width: MediaQuery.of(context).size.width,
+                  color: Colors.grey.shade300,
+                  child: _isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : (totalCount == 0
+                          ? const Center(
+                              child: Text(
+                                "승인 요청이 없습니다.",
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.black54,
+                                ),
+                              ),
+                            )
+                          : ListView.builder(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 12,
+                              ),
+                              itemCount: _pendingOrders.length,
+                              itemBuilder: (context, index) {
+                                final order = _pendingOrders[index];
+                                final bool checked =
+                                    _selectedOseqs.contains(order.oseq ?? -1);
+
+                                return Padding(
+                                  padding: const EdgeInsets.only(bottom: 10.0),
+                                  child: InkWell(
+                                    onTap: () {
+                                      if (order.oseq != null) {
+                                        _toggleSelect(order.oseq!);
+                                      }
+                                    },
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: Container(
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                          color: checked
+                                              ? Colors.black
+                                              : Colors.grey.shade300,
+                                          width: checked ? 2 : 1,
+                                        ),
+                                      ),
+                                      child: Row(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Icon(
+                                            checked
+                                                ? Icons.check_box
+                                                : Icons.check_box_outline_blank,
+                                            color: checked ? Colors.black : Colors.grey,
+                                          ),
+                                          const SizedBox(width: 10),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  order.gname,
+                                                  style: const TextStyle(
+                                                    fontSize: 15,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                                const SizedBox(height: 4),
+                                                Text(
+                                                  '옵션: ${order.gsize} / ${order.gcolor}',
+                                                  style: const TextStyle(
+                                                    fontSize: 13,
+                                                    color: Colors.black54,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 4),
+                                                Text(
+                                                  '수량: ${order.qty}개 · 제품코드: ${order.gseq}',
+                                                  style: const TextStyle(
+                                                    fontSize: 13,
+                                                    color: Colors.black54,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 6),
+                                                Text(
+                                                  '요청일: ${order.reqdate}',
+                                                  style: const TextStyle(
+                                                    fontSize: 12,
+                                                    color: Colors.grey,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            )),
                 ),
               ),
             ),
+
+            // 승인 버튼
             Padding(
-              padding: const EdgeInsets.only(top: 20, bottom: 24),
-              child: Container(
-                width: 160,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(30),
-                ),
-                child: Center(
-                  child: Text(
-                    "승인",
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.black87,
-                    ),
+              padding: const EdgeInsets.only(top: 12, bottom: 24),
+              child: GestureDetector(
+                onTap: (_isApproving || _pendingOrders.isEmpty)
+                    ? null
+                    : _approveSelected,
+                child: Container(
+                  width: 160,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: (_isApproving || _pendingOrders.isEmpty)
+                        ? Colors.grey.shade300
+                        : Colors.black,
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                  child: Center(
+                    child: _isApproving
+                        ? const SizedBox(
+                            height: 18,
+                            width: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : Text(
+                            _selectedOseqs.isEmpty
+                                ? "승인"
+                                : "승인 (${_selectedOseqs.length})",
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: (_isApproving || _pendingOrders.isEmpty)
+                                  ? Colors.black87
+                                  : Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                   ),
                 ),
               ),

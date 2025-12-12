@@ -120,6 +120,23 @@ class DatabaseHandler {
           )
           """
         );
+        await db.execute(
+          """
+          create table supply_order(
+            oseq integer primary key autoincrement,
+            manufacturer text,
+            requester text,
+            gseq integer,
+            gname text,
+            gsize text,
+            gcolor text,
+            qty integer,
+            status integer,
+            reqdate text,
+            apprdate text
+          )
+        """
+        );
       },
       version: 1,
     );

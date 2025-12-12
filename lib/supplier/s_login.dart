@@ -36,51 +36,53 @@ class _SLoginState extends State<SLogin> {
     return Scaffold(
       appBar: AppBar(),
       body: 
-        Center(
-        child: SizedBox(
-          width: 350,
-          child: Padding(
-            padding: const EdgeInsets.only(bottom: 120),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(0, 0, 0, 50),
-                  child: Image.asset('images/supplier_logo.png',
-                  scale: 8,),
-                ),
-                TextField(
-                  controller: idController,
-                  decoration: InputDecoration(
-                    labelText: '제조사 아이디를 입력하세요',
+        SingleChildScrollView(
+          child: Center(
+          child: SizedBox(
+            width: 350,
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 120),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(0, 0, 0, 50),
+                    child: Image.asset('images/supplier_logo.png',
+                    scale: 8,),
                   ),
-                ),
-                TextField(
-                  controller: nameController,
-                  decoration: InputDecoration(
-                    labelText: '제조사 이름을 입력하세요'
-                  ),
-                  obscureText: false,
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(0, 30, 0, 60),
-                  child: ElevatedButton(
-                    onPressed: (){
-                      checkLogin();
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.black,
-                      foregroundColor: Colors.white,
-                      minimumSize: Size(350, 50)
+                  TextField(
+                    controller: idController,
+                    decoration: InputDecoration(
+                      labelText: '제조사 아이디를 입력하세요',
                     ),
-                    child: Text('로그인')
                   ),
-                ),
-              ],
+                  TextField(
+                    controller: nameController,
+                    decoration: InputDecoration(
+                      labelText: '제조사 이름을 입력하세요'
+                    ),
+                    obscureText: false,
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(0, 30, 0, 60),
+                    child: ElevatedButton(
+                      onPressed: (){
+                        checkLogin();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.black,
+                        foregroundColor: Colors.white,
+                        minimumSize: Size(350, 50)
+                      ),
+                      child: Text('로그인')
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
+                ),
         ),
-      ),
     );
   } // build
 
@@ -104,7 +106,7 @@ class _SLoginState extends State<SLogin> {
           actions: [
             TextButton(
               onPressed: () {
-                Get.offAll(SMain(sid: id));
+                Get.offAll(SMain(sid: id, sname: name));
               },
               style: TextButton.styleFrom(
                   foregroundColor: Colors.black,
