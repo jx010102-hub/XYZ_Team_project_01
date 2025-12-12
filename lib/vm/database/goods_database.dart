@@ -197,4 +197,6 @@ class GoodsDatabase {
     }
     return result;
   }
+
+  
 }
