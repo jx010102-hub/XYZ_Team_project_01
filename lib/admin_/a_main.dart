@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:xyz_project_01/admin_/a_admin_add.dart';
+import 'package:xyz_project_01/admin_/a_requst.dart';
 import 'package:xyz_project_01/admin_/a_return_request.dart';
 import 'package:xyz_project_01/admin_/a_stock_status.dart';
 
@@ -29,7 +30,7 @@ class _AMainState extends State<AMain> {
     }, // 임시 함수
     {
       'text': '결제 요청',
-      'action': () => Get.snackbar('알림', '결제 요청 페이지 준비 중'),
+      'action': () => Get.to(() => const ARequst()),
     }, // 임시 함수
   ];
 
