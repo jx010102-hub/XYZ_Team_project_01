@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:xyz_project_01/admin_/admin_add.dart';
 import 'package:xyz_project_01/employee/e_find_id.dart';
 import 'package:xyz_project_01/employee/e_find_pw.dart';
 import 'package:xyz_project_01/employee/e_regist.dart';
@@ -155,7 +156,7 @@ class _ELoginState extends State<ELogin> {
           actions: [
             TextButton(
               onPressed: () {
-                Get.offAll(GTabbar(userid: id));
+                Get.offAll(const AdminAdd());
               },
               style: TextButton.styleFrom(
                 foregroundColor: Colors.black,
