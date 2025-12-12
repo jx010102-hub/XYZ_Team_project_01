@@ -1,3 +1,5 @@
+// lib/model/purchase.dart
+
 class Purchase {    // 주문
 
   int? pseq;        // 주문번호 (AI)
@@ -38,4 +40,19 @@ class Purchase {    // 주문
     pdiscount = res['pdiscount'],
     userid = res['userid'];
 
+  // ⭐️ 데이터베이스 삽입을 위해 Map 형태로 변환하는 메서드 추가
+  Map<String, dynamic> toMap() {
+      return {
+          'pseq': pseq, 
+          'pstatus': pstatus,
+          'pdate': pdate,
+          'pamount': pamount,
+          'ppaydate': ppaydate,
+          'ppayprice': ppayprice,
+          'ppayway': ppayway,
+          'ppayamount': ppayamount,
+          'pdiscount': pdiscount,
+          'userid': userid,
+      };
+  }
 }

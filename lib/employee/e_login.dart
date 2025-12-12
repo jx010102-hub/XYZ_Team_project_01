@@ -4,7 +4,6 @@ import 'package:xyz_project_01/admin_/admin_add.dart';
 import 'package:xyz_project_01/employee/e_find_id.dart';
 import 'package:xyz_project_01/employee/e_find_pw.dart';
 import 'package:xyz_project_01/employee/e_regist.dart';
-import 'package:xyz_project_01/goods/g_tabbar.dart';
 import 'package:xyz_project_01/util/message.dart';
 import 'package:xyz_project_01/vm/database/employee_database.dart';
 
