@@ -166,7 +166,6 @@ class _ELoginState extends State<ELogin> {
           ],
         );
       } else {
-        // id, pw가 틀렸을 경우
         i = false;
         message.snackBar('오류', '아이디 또는 비밀번호가 틀렸습니다.');
       }
