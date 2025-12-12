@@ -324,7 +324,7 @@ class _AStockStatusState extends State<AStockStatus> {
 
     return Flexible(
       child: Padding(
-        padding: const EdgeInsets.only(right: 10.0),
+        padding: const EdgeInsets.only(right: 7),
         child: DropdownButtonFormField<String>(
           value: _selectedProductName,
           items: productNames.map((String item) {
@@ -403,7 +403,7 @@ class _AStockStatusState extends State<AStockStatus> {
   }) {
     return Flexible(
       child: Padding(
-        padding: const EdgeInsets.only(right: 10.0),
+        padding: const EdgeInsets.only(right: 7.0),
         child: DropdownButtonFormField<String>(
           value: value,
           items: items.map((String item) {
