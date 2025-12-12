@@ -29,8 +29,6 @@ class GoodsDatabase {
   }
 
   // 중복 체크
-  // ✅ 기존 기준 유지: (gname + gsize + gcolor)
-  // - manufacturer/price는 옵션 중복 기준에 보통 안 넣음
   Future<bool> existsGoods({
     required String gname,
     required String gsize,
@@ -45,11 +43,10 @@ class GoodsDatabase {
     return result.isNotEmpty;
   }
 
-  // 입력
+  // 입력 (manufacturer, price 포함)
   Future<int> insertGoods(Goods goods) async {
     final Database db = await handler.initializeDB();
 
-    // 중복 체크
     final bool isExists = await existsGoods(
       gname: goods.gname,
       gsize: goods.gsize,
@@ -60,7 +57,6 @@ class GoodsDatabase {
       return 0;
     }
 
-    // ✅ manufacturer, price 컬럼 추가
     final int result = await db.rawInsert(
       """
         insert into goods
@@ -75,8 +71,8 @@ class GoodsDatabase {
         goods.gsize,
         goods.gcolor,
         goods.gcategory,
-        goods.manufacturer, // ✅ 추가
-        goods.price,        // ✅ 추가 (double)
+        goods.manufacturer,
+        goods.price,
         goods.mainimage,
         goods.topimage,
         goods.backimage,
@@ -87,7 +83,7 @@ class GoodsDatabase {
     return result;
   }
 
-  // 수정
+  // 수정 (manufacturer, price 포함)
   Future<int> updateGoods(Goods goods) async {
     if (goods.gseq == null) {
       return 0;
@@ -95,7 +91,6 @@ class GoodsDatabase {
 
     final Database db = await handler.initializeDB();
 
-    // ✅ manufacturer, price 업데이트 포함
     final int result = await db.rawUpdate(
       """
         update goods
@@ -145,7 +140,7 @@ class GoodsDatabase {
     );
   }
 
-  // ----- 이름으로 해당 상품의 모든 옵션(사이즈+색상) 불러오기 -----
+  // 이름으로 해당 상품의 모든 옵션 불러오기
   Future<List<Goods>> getGoodsByName(String gname) async {
     final Database db = await handler.initializeDB();
     final result = await db.query(
@@ -156,7 +151,7 @@ class GoodsDatabase {
     return result.map((e) => Goods.fromMap(e)).toList();
   }
 
-  // ----- 이름 + 사이즈 + 색상으로 특정 한 옵션만 불러오기 -----
+  // 이름 + 사이즈 + 색상으로 특정 한 옵션만 불러오기
   Future<Goods?> getGoodsVariant({
     required String gname,
     required String gsize,
@@ -173,7 +168,7 @@ class GoodsDatabase {
     return Goods.fromMap(result.first);
   }
 
-  // ⭐️⭐️⭐️ 총 재고량(gsumamount)을 증감하는 함수 ⭐️⭐️⭐️
+  // ⭐️⭐️⭐️ 1. 상품 재고(gsumamount)를 업데이트하는 함수 ⭐️⭐️⭐️
   Future<int> updateGoodsQuantity({
     required int gseq,
     required int quantityChange,
@@ -181,7 +176,6 @@ class GoodsDatabase {
     int result = 0;
     final Database db = await handler.initializeDB();
 
-    // 현재 재고 가져오기 (gsumamount)
     final List<Map<String, Object?>> query = await db.rawQuery(
       'select gsumamount from goods where gseq = ?',
       [gseq],
@@ -196,12 +190,51 @@ class GoodsDatabase {
         print("경고: 재고가 부족하여 0으로 설정되었습니다.");
       }
 
-      // gsumamount 업데이트
       result = await db.rawUpdate(
         'update goods set gsumamount = ? where gseq = ?',
         [newQty, gseq],
       );
     }
     return result;
+  }
+
+  // ⭐️⭐️⭐️ 2. 주문 번호(pseq)를 통해 해당 주문 상품의 Goods ID(gseq)를 조회 (시나리오 2 적용) ⭐️⭐️⭐️
+  // Purchase 테이블에 GSEQ가 직접 있다고 가정합니다.
+  Future<int?> getGoodsIdByPurchaseId(int pseq) async {
+    final db = await handler.initializeDB();
+    
+    // ⚠️⚠️ 'purchase' 테이블에 'gseq' 컬럼이 있어야 합니다.
+    final List<Map<String, dynamic>> maps = await db.query(
+      'purchase', 
+      columns: ['gseq'],
+      where: 'pseq = ?',
+      whereArgs: [pseq],
+      limit: 1, 
+    );
+    
+    if (maps.isNotEmpty) {
+      return maps.first['gseq'] as int?;
+    } else {
+      print('오류: purchase 테이블에서 pseq=$pseq의 gseq를 찾을 수 없습니다.');
+      return null; 
+    }
+  }
+
+  // ⭐️⭐️⭐️ 3. GSEQ를 사용하여 특정 상품 옵션의 모든 정보를 조회 ⭐️⭐️⭐️
+  Future<Goods?> getGoodsByGseq(int gseq) async {
+    final db = await handler.initializeDB();
+    
+    final List<Map<String, dynamic>> maps = await db.query(
+      'goods', 
+      where: 'gseq = ?',
+      whereArgs: [gseq],
+      limit: 1, 
+    );
+    
+    if (maps.isNotEmpty) {
+      return Goods.fromMap(maps.first); 
+    } else {
+      return null;
+    }
   }
 }
