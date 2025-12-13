@@ -41,113 +41,115 @@ class _CLoginState extends State<CLogin> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: 
-        Center(
-        child: SizedBox(
-          width: 350,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(0, 0, 0, 50),
-                child: GestureDetector(
-                onTap: () {
-                  // 이메일 입력창이 xyz
-                  if (idController.text.trim() == "xyz") {
-                    imageTapCount++;
-                    // 3번 누르면 이동
-                    if (imageTapCount >= 3) {
-                      imageTapCount = 0;
-                      Get.offAll(ELogin());
+        SingleChildScrollView(
+          child: Center(
+          child: SizedBox(
+            width: 350,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(0, 0, 0, 50),
+                  child: GestureDetector(
+                  onTap: () {
+                    // 이메일 입력창이 xyz
+                    if (idController.text.trim() == "xyz") {
+                      imageTapCount++;
+                      // 3번 누르면 이동
+                      if (imageTapCount >= 3) {
+                        imageTapCount = 0;
+                        Get.offAll(ELogin());
+                      }
                     }
-                  }
-                },
-                  child: Image.asset('images/welcome.png',
-                  scale: 4,),
-                ),
-              ),
-              TextField(
-                controller: idController,
-                decoration: InputDecoration(
-                  labelText: '이메일 주소',
-                  hintText: 'ex) xyzsuper@xyz.co.kr'
-                ),
-              ),
-              TextField(
-                controller: pwController,
-                decoration: InputDecoration(
-                  labelText: '비밀번호'
-                ),
-                obscureText: false,
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(0, 30, 0, 30),
-                child: ElevatedButton(
-                  onPressed: (){
-                    checkLogin();
                   },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.black,
-                    foregroundColor: Colors.white,
-                    minimumSize: Size(350, 50)
+                    child: Image.asset('images/welcome.png',
+                    scale: 4,),
                   ),
-                  child: Text('로그인')
                 ),
-              ),
-              IntrinsicHeight(
-                
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                TextField(
+                  controller: idController,
+                  decoration: InputDecoration(
+                    labelText: '이메일 주소',
+                    hintText: 'ex) xyzsuper@xyz.co.kr'
+                  ),
+                ),
+                TextField(
+                  controller: pwController,
+                  decoration: InputDecoration(
+                    labelText: '비밀번호'
+                  ),
+                  obscureText: false,
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(0, 30, 0, 30),
+                  child: ElevatedButton(
+                    onPressed: (){
+                      checkLogin();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.black,
+                      foregroundColor: Colors.white,
+                      minimumSize: Size(350, 50)
+                    ),
+                    child: Text('로그인')
+                  ),
+                ),
+                IntrinsicHeight(
+                  
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      TextButton(
+                        onPressed: (){
+                          Get.to(CRegist());
+                        },
+                        child: Text('회원가입')
+                      ),
+                      SizedBox(
+                        height: 20,
+                        child: VerticalDivider(
+                          color: Colors.grey,
+                          thickness: 2,
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: (){
+                        Get.to(CFindId());
+                        },
+                        child: Text('이메일 찾기')
+                      ),
+                      SizedBox(
+                        height: 20,
+                        child: VerticalDivider(
+                          color: Colors.grey,
+                          thickness: 2,
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: (){
+                        Get.to(CFindPw());
+                        },
+                        child: Text('비밀번호 찾기')
+                      ),
+                    ],
+                  ),
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     TextButton(
-                      onPressed: (){
-                        Get.to(CRegist());
+                      onPressed: () {
+                        Get.to(SLogin());
                       },
-                      child: Text('회원가입')
-                    ),
-                    SizedBox(
-                      height: 20,
-                      child: VerticalDivider(
-                        color: Colors.grey,
-                        thickness: 2,
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: (){
-                      Get.to(CFindId());
-                      },
-                      child: Text('이메일 찾기')
-                    ),
-                    SizedBox(
-                      height: 20,
-                      child: VerticalDivider(
-                        color: Colors.grey,
-                        thickness: 2,
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: (){
-                      Get.to(CFindPw());
-                      },
-                      child: Text('비밀번호 찾기')
+                      child: Text('제조사 로그인하기', style: TextStyle(fontSize: 13, color: Colors.grey, decoration: TextDecoration.underline), )
                     ),
                   ],
                 ),
-              ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () {
-                      Get.to(SLogin());
-                    },
-                    child: Text('제조사 로그인하기', style: TextStyle(fontSize: 13, color: Colors.grey, decoration: TextDecoration.underline), )
-                  ),
-                ],
-              ),
-            ],
+              ],
+            ),
           ),
+                ),
         ),
-      ),
     );
   } // build
 

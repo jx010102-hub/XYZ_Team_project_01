@@ -2,143 +2,145 @@ import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
 class DatabaseHandler {
-
-  Future<Database> initializeDB() async{
-  String path = await getDatabasesPath();
+  Future<Database> initializeDB() async {
+    final String path = await getDatabasesPath();
 
     return openDatabase(
       join(path, 'xyz.db'),
-      onCreate: (db, version) async{
-        await db.execute(
-          """
-          create table customer(
-            cseq integer primary key autoincrement,
-            cemail text,
-            cpw text,
-            cphone text,
-            cname text,
-            caddress text
+      version: 1, // ✅ 그대로 1 (새로설치할거라 업그레이드 안씀)
+
+      onCreate: (db, version) async {
+        await db.execute("""
+          CREATE TABLE customer(
+            cseq INTEGER PRIMARY KEY AUTOINCREMENT,
+            cemail TEXT,
+            cpw TEXT,
+            cphone TEXT,
+            cname TEXT,
+            caddress TEXT
           )
-          """
-        );
-        await db.execute(
-          """
-          create table goods(
-            gseq integer primary key autoincrement,
-            gsumamount integer,
-            gname text,
-            gengname text,
-            gsize text,
-            gcolor text,
-            gcategory text,
-            manufacturer text,
-            price real,
-            mainimage blob,
-            topimage blob,
-            backimage blob,
-            sideimage blob
+        """);
+
+        await db.execute("""
+          CREATE TABLE goods(
+            gseq INTEGER PRIMARY KEY AUTOINCREMENT,
+            gsumamount INTEGER,
+            gname TEXT,
+            gengname TEXT,
+            gsize TEXT,
+            gcolor TEXT,
+            gcategory TEXT,
+            manufacturer TEXT,
+            price REAL,
+            mainimage BLOB,
+            topimage BLOB,
+            backimage BLOB,
+            sideimage BLOB
           )
-          """
-        );
-        await db.execute(
-          """
-          create table branch(
-            bid integer primary key,
-            blat real,
-            blng real,
-            bname text
+        """);
+
+        await db.execute("""
+          CREATE TABLE branch(
+            bid INTEGER PRIMARY KEY,
+            blat REAL,
+            blng REAL,
+            bname TEXT
           )
-          """
-        );
-        await db.execute(
-          """
-          create table employee(
-            eseq integer primary key autoincrement,
-            eemail text,
-            epw text,
-            ephone text,
-            erank integer,
-            erole integer,
-            epower integer,
-            workplace integer,
-            ebid integer
+        """);
+
+        await db.execute("""
+          CREATE TABLE employee(
+            eseq INTEGER PRIMARY KEY AUTOINCREMENT,
+            eemail TEXT,
+            epw TEXT,
+            ephone TEXT,
+            erank INTEGER,
+            erole INTEGER,
+            epower INTEGER,
+            workplace INTEGER,
+            ebid INTEGER
           )
-          """
-        );
-        await db.execute(
-          """
-          create table supplier(
-            sid integer primary key,
-            sname text
+        """);
+
+        await db.execute("""
+          CREATE TABLE supplier(
+            sid INTEGER PRIMARY KEY,
+            sname TEXT
           )
-          """
-        );
-        await db.execute(
-          """
-          create table purchase(
-            pseq integer primary key autoincrement,
-            pstatus integer,
-            pdate text,
-            pamount integer,
-            ppaydate text,
-            ppayprice real,
-            ppayway integer,
-            ppayamount integer,
-            pdiscount real,
-            userid text
+        """);
+
+        await db.execute("""
+          CREATE TABLE purchase(
+            pseq INTEGER PRIMARY KEY AUTOINCREMENT,
+            pstatus INTEGER,
+            pdate TEXT,
+            pamount INTEGER,
+            ppaydate TEXT,
+            ppayprice REAL,
+            ppayway INTEGER,
+            ppayamount INTEGER,
+            pdiscount REAL,
+            userid TEXT,
+            gseq INTEGER,
+            gsize TEXT,
+            gcolor TEXT
           )
-          """
-        );
-        await db.execute(
-          """
-          create table refund(
-            rseq integer primary key autoincrement,
-            rdate text,
-            rreason text,
-            rstatus integer,
-            rpseq integer
+        """);
+
+        await db.execute("""
+          CREATE TABLE refund(
+            rseq INTEGER PRIMARY KEY AUTOINCREMENT,
+            rdate TEXT,
+            rreason TEXT,
+            rstatus INTEGER,
+            rpseq INTEGER
           )
-          """
-        );
-        await db.execute(
-          """
-          create table approval(
-            aseq integer primary key autoincrement,
-            astatus integer,
-            adate text,
-            aoseq integer
+        """);
+
+        await db.execute("""
+          CREATE TABLE approval(
+            aseq INTEGER PRIMARY KEY AUTOINCREMENT,
+            astatus INTEGER,
+            adate TEXT,
+            aoseq INTEGER
           )
-          """
-        );
-        await db.execute(
-          """
-          create table orders(
-            oseq integer primary key autoincrement,
-            ostatus integer,
-            odate text,
-            oamount integer
+        """);
+
+        await db.execute("""
+          CREATE TABLE orders(
+            oseq INTEGER PRIMARY KEY AUTOINCREMENT,
+            ostatus INTEGER,
+            odate TEXT,
+            oamount INTEGER
           )
-          """
-        );
-        await db.execute(
-          """
-          create table supply_order(
-            oseq integer primary key autoincrement,
-            manufacturer text,
-            requester text,
-            gseq integer,
-            gname text,
-            gsize text,
-            gcolor text,
-            qty integer,
-            status integer,
-            reqdate text,
-            apprdate text
+        """);
+
+        await db.execute("""
+          CREATE TABLE supply_order(
+            oseq INTEGER PRIMARY KEY AUTOINCREMENT,
+            manufacturer TEXT,
+            requester TEXT,
+            gseq INTEGER,
+            gname TEXT,
+            gsize TEXT,
+            gcolor TEXT,
+            qty INTEGER,
+            status INTEGER,
+            reqdate TEXT,
+            apprdate TEXT
           )
-        """
-        );
+        """);
+
+        // ==========================
+        // ✅ 반품/주문 성능(멈춤) 잡는 핵심: 인덱스
+        // ==========================
+        await db.execute("CREATE INDEX IF NOT EXISTS idx_purchase_userid ON purchase(userid);");
+        await db.execute("CREATE INDEX IF NOT EXISTS idx_purchase_pseq ON purchase(pseq);");
+        await db.execute("CREATE INDEX IF NOT EXISTS idx_purchase_gseq ON purchase(gseq);");
+
+        await db.execute("CREATE INDEX IF NOT EXISTS idx_refund_rpseq ON refund(rpseq);");
+        await db.execute("CREATE INDEX IF NOT EXISTS idx_refund_rstatus ON refund(rstatus);");
       },
-      version: 1,
     );
   }
 }

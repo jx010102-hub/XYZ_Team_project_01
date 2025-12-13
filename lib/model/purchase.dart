@@ -12,6 +12,9 @@ class Purchase {    // 주문
   int ppayamount;   // 결제수량
   double pdiscount; // 할인 (%)
   String userid;
+  int? gseq;
+  String? gsize;
+  String? gcolor;
 
   Purchase(
     {
@@ -24,7 +27,10 @@ class Purchase {    // 주문
       required this.ppayway,
       required this.ppayamount,
       required this.pdiscount,
-      required this.userid
+      required this.userid,
+      this.gseq,
+      this.gsize,
+      this.gcolor
     }
   );
 
@@ -38,7 +44,10 @@ class Purchase {    // 주문
     ppayway = res['ppayway'],
     ppayamount = res['ppayamount'],
     pdiscount = res['pdiscount'],
-    userid = res['userid'];
+    userid = res['userid'],
+    gseq = res['gseq'],
+    gsize = res['gsize'],
+    gcolor = res['gcolor'];
 
   // ⭐️ 데이터베이스 삽입을 위해 Map 형태로 변환하는 메서드 추가
   Map<String, dynamic> toMap() {
@@ -53,6 +62,9 @@ class Purchase {    // 주문
           'ppayamount': ppayamount,
           'pdiscount': pdiscount,
           'userid': userid,
+          'gseq' : gseq,
+          'gsize' : gsize,
+          'gcolor' : gcolor
       };
   }
 }

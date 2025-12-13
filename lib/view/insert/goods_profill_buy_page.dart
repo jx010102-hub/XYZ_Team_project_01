@@ -1,233 +1,495 @@
-// lib/goods/goods_profill_buy_page.dart (주문 취소 기능 추가)
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
+
 import 'package:xyz_project_01/model/purchase.dart';
 import 'package:xyz_project_01/model/refund.dart';
+import 'package:xyz_project_01/model/goods.dart';
+
 import 'package:xyz_project_01/vm/database/purchase_database.dart';
 import 'package:xyz_project_01/vm/database/refund_database.dart';
-// ⭐️ 재고 관리를 위해 GoodsDatabase를 사용해야 함 (임포트 필요)
-import 'package:xyz_project_01/vm/database/goods_database.dart'; 
-import 'package:intl/intl.dart'; 
+import 'package:xyz_project_01/vm/database/goods_database.dart';
 
-
-// ⭐️ UI 헬퍼 클래스 (Purchase 기반)
+// ===============================
+// UI용 상세 모델
+// ===============================
 class OrderDetail {
   final Purchase purchase;
-  final String itemName; // 상품명
-  final String itemOptions; // 색상/사이즈 정보
-  final String itemImageUrl;
-  // ⭐️ 상품 재고 관리를 위한 Goods ID 임시 필드 (Goods 모델과 연결 시 필요)
-  final int gseq; 
-
-  OrderDetail({
-    required this.purchase,
-    required this.itemName,
-    required this.itemOptions, // ⭐️ 옵션 필드 추가
-    required this.itemImageUrl,
-    required this.gseq, // ⭐️ 상품 ID 추가
-  });
+  final Goods? goods;
+  OrderDetail({required this.purchase, required this.goods});
 }
 
-// ⭐️ UI 헬퍼 클래스 (Refund 기반)
 class RefundDetail {
   final Refund refund;
-  final String itemName; 
-
-  RefundDetail({
-    required this.refund,
-    this.itemName = '반품 상품 정보 로딩 중',
-  });
+  final Purchase? purchase;
+  final Goods? goods;
+  RefundDetail({required this.refund, required this.purchase, required this.goods});
 }
 
-// ⭐️ 현재 선택된 뷰를 위한 Enum
 enum OrderView { purchase, refund }
 
 class GoodsProfillBuyPage extends StatefulWidget {
-  final String userId; 
-  
-  const GoodsProfillBuyPage({super.key, required this.userId}); 
+  final String userId;
+  const GoodsProfillBuyPage({super.key, required this.userId});
 
   @override
-  State<GoodsProfillBuyPage> createState() =>
-      _GoodsProfillBuyPageState();
+  State<GoodsProfillBuyPage> createState() => _GoodsProfillBuyPageState();
 }
 
-class _GoodsProfillBuyPageState
-    extends State<GoodsProfillBuyPage> {
-  
-  late TextEditingController _searchController;
-  
-  // 데이터 리스트
-  List<OrderDetail> _purchaseDetails = []; 
-  List<RefundDetail> _refundDetails = []; 
-  
+class _GoodsProfillBuyPageState extends State<GoodsProfillBuyPage> {
   bool _isLoading = true;
-  late String _currentUserId; 
-  
-  // 주문 상태 맵 (5: 주문 취소됨 추가)
-  final Map<int, String> _purchaseStatusMap = {
-    1: '주문 요청', 
-    2: '결제 완료', 
-    3: '출고 준비', 
-    4: '수령 완료',
-    5: '주문 취소됨', // ⭐️ 주문 취소 상태 추가
-  };
-  
-  // 반품 상태 맵
-  final Map<int, String> _refundStatusMap = {
-    1: '반품 요청(대기)', 
-    2: '승인 완료', 
-    3: '반품 완료'
-  };
+  late String _currentUserId;
 
-  // 상태 변수 및 DB 핸들러 인스턴스
   OrderView _currentView = OrderView.purchase;
+
   final PurchaseDatabase _purchaseDB = PurchaseDatabase();
   final RefundDatabase _refundDB = RefundDatabase();
-  final GoodsDatabase _goodsDB = GoodsDatabase(); // ⭐️ Goods DB 핸들러 추가
+  final GoodsDatabase _goodsDB = GoodsDatabase();
 
+  List<OrderDetail> _purchaseDetails = [];
+  List<RefundDetail> _refundDetails = [];
+
+  // 검색 UI는 유지하되, 실제 검색 기능 X
+
+  String _searchText = '';
+
+  final Map<int, String> _purchaseStatusMap = {
+    1: '주문 요청',
+    2: '결제 완료',
+    3: '승인 완료',
+    4: '수령 완료',
+    5: '주문 취소됨',
+  };
+
+  final Map<int, String> _refundStatusMap = {
+    1: '반품 요청(대기)',
+    2: '승인 완료',
+    3: '반품 완료',
+  };
 
   @override
   void initState() {
     super.initState();
-    _searchController = TextEditingController();
-    _currentUserId = widget.userId; 
-    _loadAllData();
+    _currentUserId = widget.userId;
+    _loadAll();
   }
 
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
+  // ===============================
+  // 공용 유틸
+  // ===============================
+  void _snack(String title, String message) {
+    Get.snackbar(title, message, snackPosition: SnackPosition.TOP);
   }
 
-  Future<void> _loadAllData() async {
-    setState(() {
-      _isLoading = true;
-    });
-
-    await _loadUserRefunds(); 
-    await _loadUserPurchases();
-    
-    if (mounted) {
-      setState(() {
-        _isLoading = false;
-      });
+  void _closeDialogIfOpen() {
+    if (Get.isDialogOpen ?? false) {
+      Get.back(closeOverlays: true);
     }
   }
 
-
-  Future<void> _loadUserPurchases() async {
-    List<Purchase> purchases = await _purchaseDB.queryPurchaseByUserId(_currentUserId); 
-    
-    // 이미 반품 요청된 주문(rpseq)의 PSEQ 목록을 만듭니다.
-    final Set<int> refundedPSeqs = _refundDetails.map((r) => r.refund.rpseq).toSet();
-    
-    // 반품되지 않은 주문만 필터링하고 OrderDetail로 구성
-    List<OrderDetail> details = purchases
-        .where((p) => !refundedPSeqs.contains(p.pseq))
-        .map((p) {
-      return OrderDetail(
-        purchase: p,
-        // ⭐️ 상품명, 옵션 임시값 설정 (실제로는 DB 조인이 필요)
-        itemName: '나이키 에어포스 1 디테일', 
-        itemOptions: '색상: 화이트/블랙, 사이즈: 270', 
-        itemImageUrl: 'images/shoe_brown.png', 
-        gseq: 1, // ⭐️ 임시 상품 ID 설정 (DB에서 가져와야 함)
-      );
-    }).toList();
-
-    if (mounted) {
-      setState(() {
-        _purchaseDetails = details;
-      });
-    }
-  }
-
-  // 사용자 반품 내역 로드
-  Future<void> _loadUserRefunds() async {
-    List<Refund> refunds = await _refundDB.queryRefundsByUserId(_currentUserId); 
-    
-    List<RefundDetail> details = refunds.map((r) => RefundDetail(refund: r, itemName: '반품 상품 PSEQ: ${r.rpseq}')).toList();
-    
-    if (mounted) {
-      setState(() {
-        _refundDetails = details;
-      });
-    }
-  }
-
-  // ⭐️⭐️⭐️ 주문 취소 처리 함수 (재고 복원 포함) ⭐️⭐️⭐️
-  Future<void> _cancelOrder(OrderDetail detail) async {
-    final pseq = detail.purchase.pseq!;
-    final quantity = detail.purchase.pamount;
-    final gseq = detail.gseq; // 취소할 상품의 ID
-
-    try {
-      // 1. 주문 상태를 취소(5)로 업데이트
-      int statusResult = await _purchaseDB.updatePurchaseStatus(pseq, 5);
-
-      // 2. 재고 복원 (수량을 양수로 전달)
-      int goodsResult = await _goodsDB.updateGoodsQuantity(
-        gseq: gseq,
-        quantityChange: quantity,
-      );
-
-      if (statusResult > 0 && goodsResult > 0) {
-        Get.snackbar('성공', '주문 취소가 완료되었으며 재고 $quantity개가 복원되었습니다.', snackPosition: SnackPosition.BOTTOM); 
-        await _loadAllData(); // 데이터 새로고침
-      } else {
-        throw Exception('DB 업데이트 실패 (주문 상태 또는 재고)');
-      }
-    } catch (e) {
-      Get.snackbar('오류', '주문 취소 처리 중 문제가 발생했습니다: $e', snackPosition: SnackPosition.BOTTOM); 
-    }
-  }
-
-  // 반품 요청 처리 함수 (기존과 동일)
-  void _requestRefund(OrderDetail detail) async {
-    if (detail.purchase.pstatus != 4) {
-        Get.snackbar('알림', '수령 완료된 주문만 반품 요청이 가능합니다.', snackPosition: SnackPosition.BOTTOM);
-        return;
-    }
-    
-    final pseq = detail.purchase.pseq!;
-    const String reason = "고객 요청에 의한 단순 변심"; 
-
-    final newRefund = Refund(
-      rdate: DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now()),
-      rreason: reason,
-      rstatus: 1, // 반품 요청, 승인 대기
-      rpseq: pseq,
-    );
-
-    try {
-      final newRseq = await _refundDB.insertRefund(newRefund);
-
-      if (newRseq > 0) {
-        Get.snackbar('성공', '반품 요청이 완료되었습니다.', snackPosition: SnackPosition.BOTTOM); 
-        await _loadAllData();
-        
-        setState(() {
-          _currentView = OrderView.refund; 
-        });
-      } else {
-        throw Exception('DB 삽입 실패');
-      }
-    } catch (e) {
-      Get.snackbar('오류', '반품 요청 중 문제가 발생했습니다: $e', snackPosition: SnackPosition.BOTTOM); 
-    }
-  }
-
-
-  // 금액 포맷 유틸리티
   String _formatCurrency(double amount) {
     final formatter = NumberFormat('#,###');
     return '${formatter.format(amount.round())}원';
   }
 
-  // 뷰 전환 버튼 위젯 (기존과 동일)
+  // status 색상(문자열 비교 대신 status int 기반)
+  Color _purchaseStatusColor(int pstatus) {
+    if (pstatus == 2) return Colors.blue;
+    if (pstatus == 3) return Colors.blue.shade700;
+    if (pstatus == 4) return Colors.green.shade700;
+    if (pstatus == 5) return Colors.red.shade700;
+    return Colors.black;
+  }
+
+  Color _refundStatusColor(int rstatus) {
+    switch (rstatus) {
+      case 1:
+        return Colors.orange.shade700;
+      case 2:
+        return Colors.blue.shade700;
+      case 3:
+        return Colors.green.shade700;
+      default:
+        return Colors.black;
+    }
+  }
+
+  String _optionText(Purchase p) {
+    final s = p.gsize ?? '-';
+    final c = p.gcolor ?? '-';
+    return '색상: $c, 사이즈: $s';
+  }
+
+  // ===============================
+  // 데이터 로드
+  // ===============================
+  Future<void> _loadAll() async {
+    if (!mounted) return;
+    setState(() => _isLoading = true);
+
+    try {
+      await _loadUserRefunds();
+      await _loadUserPurchases();
+    } catch (e) {
+      debugPrint('LOADALL ERROR: $e');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _loadUserPurchases() async {
+    // ✅ 반품요청된 주문은 제외하고 가져오기 (DB에서 필터링)
+    final purchases = await _purchaseDB.queryPurchasesForUserExcludeRefunded(_currentUserId);
+
+    final gseqSet = purchases.where((p) => p.gseq != null).map((p) => p.gseq!).toSet();
+    final goodsList = await _goodsDB.getGoodsThumbByGseqList(gseqSet.toList());
+    final goodsMap = {for (final g in goodsList) if (g.gseq != null) g.gseq!: g};
+
+    final details = purchases
+        .map((p) => OrderDetail(purchase: p, goods: (p.gseq != null) ? goodsMap[p.gseq!] : null))
+        .toList();
+
+    if (!mounted) return;
+    setState(() => _purchaseDetails = details);
+  }
+
+  Future<void> _loadUserRefunds() async {
+    final refunds = await _refundDB.queryRefundsByUserId(_currentUserId);
+
+    final pseqSet = refunds.map((r) => r.rpseq).toSet();
+    final purchaseList = await _purchaseDB.queryPurchasesByPseqList(pseqSet.toList());
+    final purchaseMap = {for (final p in purchaseList) if (p.pseq != null) p.pseq!: p};
+
+    final gseqSet = purchaseList.where((p) => p.gseq != null).map((p) => p.gseq!).toSet();
+    final goodsList = await _goodsDB.getGoodsThumbByGseqList(gseqSet.toList());
+    final goodsMap = {for (final g in goodsList) if (g.gseq != null) g.gseq!: g};
+
+    final details = refunds.map((r) {
+      final p = purchaseMap[r.rpseq];
+      final g = (p != null && p.gseq != null) ? goodsMap[p.gseq!] : null;
+      return RefundDetail(refund: r, purchase: p, goods: g);
+    }).toList();
+
+    if (!mounted) return;
+    setState(() => _refundDetails = details);
+  }
+
+  // ===============================
+  // 액션: 수령하기 / 반품요청 / 반품완료
+  // ===============================
+  Future<void> _markAsReceived(OrderDetail detail) async {
+    final pseq = detail.purchase.pseq;
+    if (pseq == null) return;
+
+    try {
+      final r = await _purchaseDB.updatePurchaseToReceived(pseq);
+      if (r > 0) {
+        _snack('완료', '수령 완료 처리되었습니다.');
+        await _loadAll();
+      } else {
+        _snack('실패', '수령 완료 처리 실패');
+      }
+    } catch (e) {
+      _snack('오류', '수령 처리 중 오류: $e');
+    }
+  }
+
+  /// ✅ 반품 요청 다이얼로그(멈춤/잔존 방지 버전) - UI는 앱 톤과 유사하게
+  Future<void> _showRefundDialog(OrderDetail detail) async {
+    final p = detail.purchase;
+
+    if (p.pseq == null || p.pstatus != 4) {
+      _snack('알림', '수령 완료된 주문만 반품 요청이 가능합니다.');
+      return;
+    }
+
+    final reasonController = TextEditingController();
+    bool isSubmitting = false;
+
+    Get.dialog(
+      StatefulBuilder(
+        builder: (_, setLocalState) {
+          Future<void> submit() async {
+            if (isSubmitting) return;
+
+            final reason = reasonController.text.trim();
+            if (reason.isEmpty) {
+              _snack('알림', '반품 사유를 입력해 주세요.');
+              return;
+            }
+
+            setLocalState(() => isSubmitting = true);
+
+            try {
+              final nowStr = DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now());
+              final newRefund = Refund(
+                rdate: nowStr,
+                rreason: reason,
+                rstatus: 1,
+                rpseq: p.pseq!,
+              );
+
+              final id = await _refundDB.insertRefund(newRefund);
+              if (id <= 0) {
+                setLocalState(() => isSubmitting = false);
+                _snack('실패', '반품 요청 등록 실패');
+                return;
+              }
+
+              _closeDialogIfOpen();
+
+              // ✅ 닫힌 다음 프레임에서 UI 갱신(프리즈/잔존 방지)
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (!mounted) return;
+
+                setState(() {
+                  _purchaseDetails.removeWhere((d) => d.purchase.pseq == p.pseq);
+
+                  _refundDetails.insert(
+                    0,
+                    RefundDetail(
+                      refund: Refund(
+                        rseq: id,
+                        rdate: newRefund.rdate,
+                        rreason: newRefund.rreason,
+                        rstatus: newRefund.rstatus,
+                        rpseq: newRefund.rpseq,
+                      ),
+                      purchase: p,
+                      goods: detail.goods,
+                    ),
+                  );
+
+                  _currentView = OrderView.refund;
+                });
+
+                _snack('완료', '반품 요청이 등록되었습니다.');
+              });
+            } catch (e) {
+              setLocalState(() => isSubmitting = false);
+              _snack('오류', '반품 요청 중 오류: $e');
+            }
+          }
+
+          return Dialog(
+            insetPadding: const EdgeInsets.symmetric(horizontal: 18),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(18, 18, 18, 14),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('반품 요청', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 6),
+                  Text('사유를 입력하면 반품 요청이 접수됩니다.',
+                      style: TextStyle(fontSize: 13, color: Colors.grey.shade600)),
+                  const SizedBox(height: 14),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Colors.grey.shade200),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    child: TextField(
+                      controller: reasonController,
+                      enabled: !isSubmitting,
+                      maxLines: 4,
+                      decoration: const InputDecoration(
+                        border: InputBorder.none,
+                        hintText: '예) 사이즈가 맞지 않음',
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: isSubmitting ? null : _closeDialogIfOpen,
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: Colors.black),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          child: const Text('취소',
+                              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black)),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: isSubmitting ? null : submit,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.black,
+                            foregroundColor: Colors.white,
+                            disabledBackgroundColor: Colors.grey.shade400,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          child: isSubmitting
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                )
+                              : const Text('요청하기', style: TextStyle(fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+      barrierDismissible: false,
+    ).whenComplete(() => reasonController.dispose());
+  }
+
+  /// ✅ 반품 완료 + 재고복원(멈춤/잔존 방지 버전)
+  Future<void> _completeRefundAndRestore(RefundDetail detail) async {
+    final rseq = detail.refund.rseq;
+    final p = detail.purchase;
+
+    if (rseq == null || p == null || p.gseq == null) {
+      _snack('오류', '정보가 올바르지 않습니다.');
+      return;
+    }
+
+    Get.dialog(
+      Dialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 18),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(18, 18, 18, 14),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('반품 완료', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 6),
+              Text('완료 시 재고가 복원되며 되돌릴 수 없습니다.',
+                  style: TextStyle(fontSize: 13, color: Colors.grey.shade600)),
+              const SizedBox(height: 14),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.grey.shade200),
+                ),
+                child: const Text('정말 반품을 완료할까요?',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: _closeDialogIfOpen,
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Colors.black),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      child:
+                          const Text('취소', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black)),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.black,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      onPressed: () async {
+                        _closeDialogIfOpen();
+
+                        final success = await _refundDB.completeRefundWithStockRestore(
+                          rseq: rseq,
+                          gseq: p.gseq!,
+                          restoreQty: p.pamount,
+                        );
+
+                        WidgetsBinding.instance.addPostFrameCallback((_) async {
+                          if (!mounted) return;
+
+                          if (success) {
+                            _snack('완료', '반품이 완료되었습니다.');
+                            await _loadAll();
+                          } else {
+                            _snack('실패', '반품 처리 실패');
+                          }
+                        });
+                      },
+                      child: const Text('완료하기', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+      barrierDismissible: false,
+    );
+  }
+
+  // ===============================
+  // 화면
+  // ===============================
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(icon: const Icon(Icons.arrow_back_ios, color: Colors.black), onPressed: () => Get.back()),
+        title: const Text('내역 관리', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 20)),
+        backgroundColor: Colors.white,
+        elevation: 0,
+      ),
+      body: Column(
+        children: [
+          _buildSearchBar(), // UI 유지
+          _buildViewSwitcher(),
+          Expanded(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _currentView == OrderView.purchase
+                    ? _buildPurchaseView()
+                    : _buildRefundView(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ✅ UI 유지 + (선택) 검색 텍스트만 저장(기능 변경 없음)
+  Widget _buildSearchBar() {
+    return Padding(
+      padding: const EdgeInsets.all(15.0),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(10)),
+        child: TextField(
+          decoration: InputDecoration(
+            hintText: '내역 검색',
+            border: InputBorder.none,
+            prefixIcon: Icon(Icons.search, color: Colors.grey.shade600),
+            contentPadding: const EdgeInsets.symmetric(vertical: 15),
+          ),
+          onChanged: (v) => setState(() => _searchText = v.trim()),
+        ),
+      ),
+    );
+  }
+
   Widget _buildViewSwitcher() {
     return Padding(
       padding: const EdgeInsets.only(top: 10.0, bottom: 5.0),
@@ -241,344 +503,94 @@ class _GoodsProfillBuyPageState
     );
   }
 
-  // 뷰 전환 개별 버튼 위젯 (기존과 동일)
   Widget _buildViewButton(String title, OrderView view) {
     final isSelected = _currentView == view;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 5.0),
       child: TextButton(
-        onPressed: () {
-          setState(() {
-            _currentView = view;
-          });
-        },
+        onPressed: () => setState(() => _currentView = view),
         style: TextButton.styleFrom(
           foregroundColor: isSelected ? Colors.black : Colors.grey.shade600,
           backgroundColor: isSelected ? Colors.grey.shade300 : Colors.transparent,
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
-            side: BorderSide(
-              color: isSelected ? Colors.black : Colors.grey.shade300,
-              width: 1,
-            ),
+            side: BorderSide(color: isSelected ? Colors.black : Colors.grey.shade300, width: 1),
           ),
         ),
-        child: Text(
-          title,
-          style: TextStyle(
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-            fontSize: 15,
-          ),
-        ),
+        child: Text(title, style: TextStyle(fontWeight: isSelected ? FontWeight.bold : FontWeight.normal, fontSize: 15)),
       ),
     );
   }
 
+  // ===============================
+  // 날짜 그룹 공용 빌더
+  // ===============================
+  Map<String, List<T>> _groupByDate<T>(List<T> items, String Function(T) dateKeyFn) {
+    final Map<String, List<T>> grouped = {};
+    for (final item in items) {
+      final key = dateKeyFn(item);
+      grouped.putIfAbsent(key, () => []);
+      grouped[key]!.add(item);
+    }
+    return grouped;
+  }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
-          onPressed: () {
-            Get.back();
-          },
-        ),
-        title: const Text(
-          '내역 관리',
-          style: TextStyle(
-            color: Colors.black,
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
-          ),
-        ),
-        backgroundColor: Colors.white,
-        elevation: 0,
-      ),
+  List<String> _sortedDateKeys(Map<String, List<dynamic>> grouped) {
+    final keys = grouped.keys.toList()..sort((a, b) => b.compareTo(a));
+    return keys;
+  }
 
-      body: Column(
+  String _toDateKey(String dateTimeStr) {
+    // 'yyyy-mm-dd HH:mm:ss' -> 'yyyy.mm.dd'
+    return dateTimeStr.split(' ')[0].replaceAll('-', '.');
+  }
+
+  // ===============================
+  // 주문내역 View
+  // ===============================
+  Widget _buildPurchaseView() {
+    // (선택) 검색어가 있어도 기능은 유지(현재 필터 미적용). 원하면 여기서만 필터 넣어줄 수 있음.
+    final visible = _purchaseDetails; // 기능 그대로
+
+    if (visible.isEmpty) {
+      return Center(child: Text('$_currentUserId 님의 주문 내역이 없습니다.'));
+    }
+
+    final grouped = _groupByDate<OrderDetail>(visible, (d) => _toDateKey(d.purchase.pdate));
+    final dates = _sortedDateKeys(grouped);
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      child: Column(
         children: [
-          _buildSearchBar(),
-          _buildViewSwitcher(), 
-          
-          Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator()) 
-                : _currentView == OrderView.purchase
-                    ? _buildPurchaseView() 
-                    : _buildRefundView(), 
-          ),
+          for (final date in dates) ...[
+            Padding(
+              padding: const EdgeInsets.only(top: 15.0, left: 5, bottom: 8),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(date, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              ),
+            ),
+            for (final detail in grouped[date]!) _buildOrderItemCard(detail),
+          ],
         ],
       ),
     );
   }
 
-  // 검색창 위젯 (기존과 동일)
-  Widget _buildSearchBar() {
-    return Padding(
-      padding: const EdgeInsets.all(15.0),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10),
-        decoration: BoxDecoration(
-          color: Colors.grey.shade100,
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: TextField(
-          controller: _searchController,
-          decoration: InputDecoration(
-            hintText: '내역 검색',
-            border: InputBorder.none,
-            prefixIcon: Icon(
-              Icons.search,
-              color: Colors.grey.shade600,
-            ),
-            contentPadding: const EdgeInsets.symmetric(vertical: 15),
-          ),
-          onSubmitted: (value) {
-            // TODO: 검색 로직 구현 
-          },
-        ),
-      ),
-    );
-  }
-
-  // 주문 내역 리스트 View (기존과 동일)
-  Widget _buildPurchaseView() {
-    if (_purchaseDetails.isEmpty) {
-      return Center(child: Text('$_currentUserId 님의 주문 내역이 없습니다.'));
-    }
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      child: Column(children: _buildOrderList(_purchaseDetails)),
-    );
-  }
-
-  // 반품 내역 리스트 View (기존과 동일)
-  Widget _buildRefundView() {
-    if (_refundDetails.isEmpty) {
-      return Center(child: Text('$_currentUserId 님의 반품 내역이 없습니다.'));
-    }
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      child: Column(children: _buildRefundList(_refundDetails)), 
-    );
-  }
-
-  // 주문 내역 리스트 위젯들을 생성하는 함수 (기존과 동일)
-  List<Widget> _buildOrderList(List<OrderDetail> details) {
-    Map<String, List<OrderDetail>> groupedOrders = {};
-    for (var detail in details) {
-      String date = detail.purchase.pdate.split(' ')[0].replaceAll('-', '.');
-      if (!groupedOrders.containsKey(date)) { groupedOrders[date] = []; }
-      groupedOrders[date]!.add(detail);
-    }
-
-    List<Widget> listWidgets = [];
-    final sortedDates = groupedOrders.keys.toList()..sort((a, b) => b.compareTo(a));
-
-    for (var date in sortedDates) {
-      listWidgets.add(
-        Padding(
-          padding: const EdgeInsets.only(top: 15.0, left: 5, bottom: 8),
-          child: Text(date, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-        ),
-      );
-
-      for (var orderDetail in groupedOrders[date]!) { 
-        listWidgets.add(_buildOrderItemCard(orderDetail)); 
-      }
-    }
-    return listWidgets;
-  }
-
-  // 개별 주문 상품 카드 위젯 (⭐️ 탭 로직에 주문 취소 추가)
   Widget _buildOrderItemCard(OrderDetail detail) {
-    final Purchase purchase = detail.purchase;
-    final String status = _purchaseStatusMap[purchase.pstatus] ?? '상태불명';
-    
-    // ⭐️ 카드 탭 시 실행할 함수 정의 (주문 취소 로직 추가)
-    void handleCardTap() {
-      // 1. 수령 완료 상태: 반품 요청 다이얼로그
-      if (purchase.pstatus == 4) {
-        Get.defaultDialog(
-          title: '반품 요청 확인',
-          middleText: '해당 주문 상품에 대해 반품 요청을 진행하시겠습니까?',
-          actions: [
-            TextButton(onPressed: () => Get.back(), child: const Text('아니요')),
-            ElevatedButton(
-              onPressed: () {
-                Get.back(); 
-                _requestRefund(detail); 
-              },
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.black, foregroundColor: Colors.white),
-              child: const Text('예'),
-            ),
-          ],
-        );
-      } 
-      // 2. 결제 완료 상태: 주문 취소 다이얼로그 (출고 준비 중인 상태(3)에서도 취소 가능할 수 있음)
-      else if (purchase.pstatus == 2 || purchase.pstatus == 3) {
-        Get.defaultDialog(
-          title: '주문 취소 확인',
-          middleText: '주문을 취소하고 결제를 환불하시겠습니까?',
-          actions: [
-            TextButton(onPressed: () => Get.back(), child: const Text('아니요')),
-            ElevatedButton(
-              onPressed: () {
-                Get.back(); 
-                _cancelOrder(detail); // ⭐️ 주문 취소 함수 호출
-              },
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
-              child: const Text('예, 취소합니다'),
-            ),
-          ],
-        );
-      }
-      // 3. 기타 상태 (취소됨, 요청 중): 알림 표시
-      else {
-        Get.snackbar(
-          '알림', 
-          '[$status] 상태이므로 취소/반품 요청이 불가합니다.', 
-          snackPosition: SnackPosition.BOTTOM
-        );
-      }
-    }
+    final p = detail.purchase;
+    final g = detail.goods;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      // ⭐️ InkWell 추가: 카드 전체를 탭 가능하게 만듭니다.
-      child: InkWell(
-        onTap: handleCardTap, // 탭 핸들러 연결
-        borderRadius: BorderRadius.circular(10), // Container의 borderRadius와 맞춥니다.
-        child: Container(
-          padding: const EdgeInsets.all(15),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(10),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.withOpacity(0.1), spreadRadius: 1, blurRadius: 5, offset: const Offset(0, 3),
-              ),
-            ],
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 1. 상품 이미지 (아이콘 플레이스홀더로 대체)
-              Container( 
-                width: 80, height: 80,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(8), 
-                  color: Colors.grey.shade200, 
-                ),
-                child: ClipRRect( 
-                  borderRadius: BorderRadius.circular(8),
-                  child: const Center(child: Icon(Icons.shopping_bag_outlined, color: Colors.grey, size: 40)),
-                ),
-              ),
-              const SizedBox(width: 15),
-  
-              // 2. 상품 정보 (상품명과 색상/옵션 표시)
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      detail.itemName, 
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500), 
-                      overflow: TextOverflow.ellipsis
-                    ),
-                    const SizedBox(height: 5),
-                    Text(
-                      detail.itemOptions, 
-                      style: TextStyle(fontSize: 14, color: Colors.grey.shade600)
-                    ),
-                    const SizedBox(height: 5),
-                    Text(
-                      '${_formatCurrency(purchase.ppayprice)}  ${purchase.pamount}개', 
-                      style: TextStyle(fontSize: 14, color: Colors.grey.shade600)
-                    ),
-                  ],
-                ),
-              ),
-  
-              // 3. 상태 표시
-              _buildStatusDisplay(detail, status), 
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+    final statusText = _purchaseStatusMap[p.pstatus] ?? '상태불명';
+    final statusColor = _purchaseStatusColor(p.pstatus);
 
-  // ⭐️ 상태만 표시하는 위젯 (기존과 동일)
-  Widget _buildStatusDisplay(OrderDetail detail, String status) {
-      Color buttonColor = Colors.grey.shade200;
-      Color textColor = Colors.black;
+    final img = g?.mainimage;
+    final title = g?.gname ?? '(상품 정보 없음)';
+    final engTitle = g?.gengname ?? '';
+    final option = _optionText(p);
 
-      if (status == '결제 완료' || status == '출고 준비') {
-          textColor = Colors.blue;
-      } else if (status == '수령 완료') {
-          textColor = Colors.green.shade700;
-      } else if (status == '주문 취소됨') { // ⭐️ 취소된 주문의 색상
-          textColor = Colors.red.shade700;
-      }
-
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(
-          color: buttonColor,
-          borderRadius: BorderRadius.circular(5),
-        ),
-        child: Text(
-          status, 
-          style: TextStyle(fontSize: 14, color: textColor, fontWeight: FontWeight.bold),
-        ),
-      );
-  }
-
-  // 반품 내역 리스트 위젯들을 생성하는 함수 (기존과 동일)
-  List<Widget> _buildRefundList(List<RefundDetail> details) {
-    Map<String, List<RefundDetail>> groupedRefunds = {};
-    for (var detail in details) {
-      String date = detail.refund.rdate.split(' ')[0].replaceAll('-', '.');
-      if (!groupedRefunds.containsKey(date)) { groupedRefunds[date] = []; }
-      groupedRefunds[date]!.add(detail);
-    }
-
-    List<Widget> listWidgets = [];
-    final sortedDates = groupedRefunds.keys.toList()..sort((a, b) => b.compareTo(a));
-
-    for (var date in sortedDates) {
-      listWidgets.add(
-        Padding(
-          padding: const EdgeInsets.only(top: 15.0, left: 5, bottom: 8),
-          child: Text(date, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-        ),
-      );
-
-      for (var refundDetail in groupedRefunds[date]!) {
-        listWidgets.add(_buildRefundItemCard(refundDetail));
-      }
-    }
-    return listWidgets;
-  }
-
-  // 개별 반품 상품 카드 위젯 (기존과 동일)
-  Widget _buildRefundItemCard(RefundDetail detail) {
-    final Refund refund = detail.refund;
-    final String status = _refundStatusMap[refund.rstatus] ?? '상태불명';
-    
-    Color textColor;
-    switch(refund.rstatus) {
-      case 1: textColor = Colors.orange.shade700; break;
-      case 2: textColor = Colors.blue.shade700; break;
-      case 3: textColor = Colors.green.shade700; break;
-      default: textColor = Colors.black;
-    }
-    
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Container(
@@ -588,51 +600,205 @@ class _GoodsProfillBuyPageState
           borderRadius: BorderRadius.circular(10),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withOpacity(0.1), spreadRadius: 1, blurRadius: 5, offset: const Offset(0, 3),
+              color: Colors.grey.withOpacity(0.1),
+              spreadRadius: 1,
+              blurRadius: 5,
+              offset: const Offset(0, 3),
             ),
           ],
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 1. 이미지 (임시)
-            Container( 
-              width: 80, height: 80,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8), color: Colors.grey.shade100,
-              ),
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(borderRadius: BorderRadius.circular(8), color: Colors.grey.shade200),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(8),
-                child: Center(
-                    child: Text('반품', style: TextStyle(color: Colors.grey.shade500))),
+                child: img != null
+                    ? Image.memory(img, fit: BoxFit.cover, cacheWidth: 160, cacheHeight: 160)
+                    : const Center(child: Icon(Icons.shopping_bag_outlined, color: Colors.grey, size: 40)),
               ),
             ),
             const SizedBox(width: 15),
-
-            // 2. 정보 및 사유
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(detail.itemName, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500), overflow: TextOverflow.ellipsis), 
+                  Text(title,
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                      overflow: TextOverflow.ellipsis),
+                  if (engTitle.isNotEmpty) ...[
+                    const SizedBox(height: 3),
+                    Text(engTitle, style: TextStyle(fontSize: 12, color: Colors.grey.shade600), overflow: TextOverflow.ellipsis),
+                  ],
                   const SizedBox(height: 5),
-                  Text('사유: ${refund.rreason}', style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
-                  Text('요청일: ${refund.rdate.split(' ')[0]}', style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
+                  Text(option, style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
+                  const SizedBox(height: 5),
+                  Text('${_formatCurrency(p.ppayprice)}  ${p.pamount}개',
+                      style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
                 ],
               ),
             ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                _buildStatusDisplay(statusText, statusColor),
+                const SizedBox(height: 8),
+                if (p.pstatus == 3)
+                  SizedBox(
+                    height: 30,
+                    child: ElevatedButton(
+                      onPressed: () => _markAsReceived(detail),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.black,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                      ),
+                      child: const Text('수령하기', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                if (p.pstatus == 4)
+                  SizedBox(
+                    height: 30,
+                    child: OutlinedButton(
+                      onPressed: () => _showRefundDialog(detail),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Colors.black),
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                      ),
+                      child: const Text('반품 요청', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
-            // 3. 반품 상태 표시
+  Widget _buildStatusDisplay(String text, Color textColor) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(color: Colors.grey.shade200, borderRadius: BorderRadius.circular(5)),
+      child: Text(text, style: TextStyle(fontSize: 14, color: textColor, fontWeight: FontWeight.bold)),
+    );
+  }
+
+  // ===============================
+  // 반품내역 View
+  // ===============================
+  Widget _buildRefundView() {
+    final visible = _refundDetails; // 기능 그대로
+
+    if (visible.isEmpty) {
+      return Center(child: Text('$_currentUserId 님의 반품 내역이 없습니다.'));
+    }
+
+    final grouped = _groupByDate<RefundDetail>(visible, (d) => _toDateKey(d.refund.rdate));
+    final dates = _sortedDateKeys(grouped);
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      child: Column(
+        children: [
+          for (final date in dates) ...[
+            Padding(
+              padding: const EdgeInsets.only(top: 15.0, left: 5, bottom: 8),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(date, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              ),
+            ),
+            for (final detail in grouped[date]!) _buildRefundItemCard(detail),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRefundItemCard(RefundDetail detail) {
+    final r = detail.refund;
+    final p = detail.purchase;
+    final g = detail.goods;
+
+    final statusText = _refundStatusMap[r.rstatus] ?? '상태불명';
+    final statusColor = _refundStatusColor(r.rstatus);
+
+    final img = g?.mainimage;
+    final title = g?.gname ?? '(상품 정보 없음)';
+    final engTitle = g?.gengname ?? '';
+    final option = (p == null) ? '옵션 정보 없음' : _optionText(p);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Container(
+        padding: const EdgeInsets.all(15),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          boxShadow: [
+            BoxShadow(color: Colors.grey.withOpacity(0.1), spreadRadius: 1, blurRadius: 5, offset: const Offset(0, 3)),
+          ],
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(borderRadius: BorderRadius.circular(8), color: Colors.grey.shade200),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: img != null
+                    ? Image.memory(img, fit: BoxFit.cover, cacheWidth: 160, cacheHeight: 160)
+                    : Center(child: Text('반품', style: TextStyle(color: Colors.grey.shade500))),
+              ),
+            ),
+            const SizedBox(width: 15),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title,
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                      overflow: TextOverflow.ellipsis),
+                  if (engTitle.isNotEmpty) ...[
+                    const SizedBox(height: 3),
+                    Text(engTitle, style: TextStyle(fontSize: 12, color: Colors.grey.shade600), overflow: TextOverflow.ellipsis),
+                  ],
+                  const SizedBox(height: 5),
+                  Text(option, style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
+                  const SizedBox(height: 5),
+                  Text('사유: ${r.rreason}', style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
+                  Text('요청일: ${r.rdate.split(' ')[0]}', style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
+                  if (r.rstatus == 2) ...[
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      height: 32,
+                      child: ElevatedButton(
+                        onPressed: () => _completeRefundAndRestore(detail),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.black,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                        ),
+                        child: const Text('반품 완료하기', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade200,
-                borderRadius: BorderRadius.circular(5),
-              ),
-              child: Text(
-                status, 
-                style: TextStyle(fontSize: 14, color: textColor, fontWeight: FontWeight.bold),
-              ),
+              decoration: BoxDecoration(color: Colors.grey.shade200, borderRadius: BorderRadius.circular(5)),
+              child: Text(statusText, style: TextStyle(fontSize: 14, color: statusColor, fontWeight: FontWeight.bold)),
             ),
           ],
         ),

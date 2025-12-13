@@ -62,105 +62,107 @@ class _ERegistState extends State<ERegist> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(),
-      body: Center(
-        child: SizedBox(
-          width: 350,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: Image.asset('images/logo.png'),
-              ),
-              Text('회원가입', style: TextStyle(fontSize: 25)),
-              TextField(
-                controller: idController,
-                decoration: InputDecoration(
-                  labelText: '이메일 주소',
+      body: SingleChildScrollView(
+        child: Center(
+          child: SizedBox(
+            width: 350,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Image.asset('images/logo.png'),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  0,
-                  30,
-                  0,
-                  30,
-                ),
-                child: ElevatedButton(
-                  onPressed: () async{
-                    await checkId(ok: true);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.black,
-                    foregroundColor: Colors.white,
-                    minimumSize: Size(350, 50),
+                Text('회원가입', style: TextStyle(fontSize: 25)),
+                TextField(
+                  controller: idController,
+                  decoration: InputDecoration(
+                    labelText: '이메일 주소',
                   ),
-                  child: Text('중복확인'),
                 ),
-              ),
-              TextField(
-                controller: pwController,
-                decoration: InputDecoration(
-                  labelText: '비밀번호',
-                ),
-              ),
-              TextField(
-                controller: nameController,
-                decoration: InputDecoration(
-                  labelText: '이름',
-                ),
-              ),
-              TextField(
-                controller: phoneController,
-                decoration: InputDecoration(
-                  labelText: '전화번호',
-                ),
-              ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                 Text('직급:  '),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(30, 0, 0, 0),
-                    child: DropdownButton<String>(
-                      hint: Text('선택'),
-                      value: selectedRank,
-                      items: rankMap.keys.map((rankName) {
-                        return DropdownMenuItem(
-                          value: rankName,
-                          child: Text(rankName),
-                        );
-                      }).toList(),
-                      onChanged: (value) {
-                        setState(() {
-                          selectedRank = value;
-                        });
-                      },
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    0,
+                    30,
+                    0,
+                    30,
+                  ),
+                  child: ElevatedButton(
+                    onPressed: () async{
+                      await checkId(ok: true);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.black,
+                      foregroundColor: Colors.white,
+                      minimumSize: Size(350, 50),
                     ),
+                    child: Text('중복확인'),
                   ),
-                ],
-              ),
-
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  0,
-                  30,
-                  0,
-                  30,
                 ),
-                child: ElevatedButton(
-                  onPressed: () {
-                    checkRegister();
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.black,
-                    foregroundColor: Colors.white,
-                    minimumSize: const Size(350, 50),
+                TextField(
+                  controller: pwController,
+                  decoration: InputDecoration(
+                    labelText: '비밀번호',
                   ),
-                  child: Text('회원가입'),
                 ),
-              ),
-            ],
+                TextField(
+                  controller: nameController,
+                  decoration: InputDecoration(
+                    labelText: '이름',
+                  ),
+                ),
+                TextField(
+                  controller: phoneController,
+                  decoration: InputDecoration(
+                    labelText: '전화번호',
+                  ),
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                   Text('직급:  '),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(30, 0, 0, 0),
+                      child: DropdownButton<String>(
+                        hint: Text('선택'),
+                        value: selectedRank,
+                        items: rankMap.keys.map((rankName) {
+                          return DropdownMenuItem(
+                            value: rankName,
+                            child: Text(rankName),
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            selectedRank = value;
+                          });
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+        
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    0,
+                    30,
+                    0,
+                    30,
+                  ),
+                  child: ElevatedButton(
+                    onPressed: () {
+                      checkRegister();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.black,
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size(350, 50),
+                    ),
+                    child: Text('회원가입'),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

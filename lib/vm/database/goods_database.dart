@@ -237,4 +237,63 @@ class GoodsDatabase {
       return null;
     }
   }
+  // 여러 gseq를 한 번에 조회 (IN 쿼리)
+
+Future<List<Goods>> getGoodsByGseqList(List<int> gseqList) async {
+  if (gseqList.isEmpty) return [];
+
+  final db = await handler.initializeDB();
+  final placeholders = List.filled(gseqList.length, '?').join(',');
+
+  final maps = await db.rawQuery(
+    'SELECT * FROM goods WHERE gseq IN ($placeholders)',
+    gseqList,
+  );
+
+  return maps.map((e) => Goods.fromMap(e)).toList();
+}
+// ✅ 리스트용: mainimage만 포함(나머지 blob 제외) + 필요한 컬럼만 SELECT
+Future<List<Goods>> getGoodsThumbByGseqList(List<int> gseqList) async {
+  if (gseqList.isEmpty) return [];
+
+  final db = await handler.initializeDB();
+  final placeholders = List.filled(gseqList.length, '?').join(',');
+
+  final maps = await db.rawQuery(
+    '''
+    SELECT 
+      gseq, gsumamount, gname, gengname, gsize, gcolor, gcategory,
+      manufacturer, price,
+      mainimage
+    FROM goods
+    WHERE gseq IN ($placeholders)
+    ''',
+    gseqList,
+  );
+
+  return maps.map((e) => Goods.fromMap(e)).toList();
+}
+
+// ✅ 더 강하게: 이미지 없이 meta만 (원하면 사용)
+Future<List<Goods>> getGoodsMetaByGseqList(List<int> gseqList) async {
+  if (gseqList.isEmpty) return [];
+
+  final db = await handler.initializeDB();
+  final placeholders = List.filled(gseqList.length, '?').join(',');
+
+  final maps = await db.rawQuery(
+    '''
+    SELECT 
+      gseq, gsumamount, gname, gengname, gsize, gcolor, gcategory,
+      manufacturer, price
+    FROM goods
+    WHERE gseq IN ($placeholders)
+    ''',
+    gseqList,
+  );
+
+  return maps.map((e) => Goods.fromMap(e)).toList();
+}
+
+
 }
