@@ -11,6 +11,13 @@ class ExampleData {
   // 1. 고객 (customer) 예시 데이터 (기존 내용 유지)
   static final List<Map<String, dynamic>> customers = [
     // { 'cemail': 'user1@example.com', 'cpw': '1234', ... },
+    {
+    'cemail' : '123',
+    'cpw' : '123',
+    'cphone' : '123',
+    'cname' : '123',
+    'caddress' : '123',
+    }
   ];
 
   // 2. 상품 (goods) 예시 데이터 (기존 내용 유지)
@@ -195,7 +202,7 @@ class ExampleData {
     for (var branch in branches) {
       final int bid = branch['bid'] as int;
       final String engName = branch['engName'] as String;
-      final String korName = branch['name'] as String;
+      // final String korName = branch['name'] as String;
       
       // 2-1. 점장 (대리점장)
       list.add({

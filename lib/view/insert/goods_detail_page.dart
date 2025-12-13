@@ -2,9 +2,9 @@
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:xyz_project_01/insert/goods_Info_Page.dart';
+import 'package:xyz_project_01/view/insert/goods_Info_Page.dart';
 import 'package:xyz_project_01/model/goods.dart';
-import 'package:xyz_project_01/pay/paypage.dart';
+import 'package:xyz_project_01/view/pay/paypage.dart';
 import 'package:xyz_project_01/vm/database/goods_database.dart';
 import 'dart:typed_data'; // Uint8List 사용
 
@@ -396,12 +396,8 @@ class _GoodsDetailPageState extends State<GoodsDetailPage> {
     }
 
     // 옵션 초기화 (선택이 없었다면 첫 번째 항목으로 설정)
-    if (_selectedSize == null) {
-      _selectedSize = _availableSizes.first;
-    }
-    if (_selectedColor == null) {
-      _selectedColor = _availableColorMap.keys.first;
-    }
+    _selectedSize ??= _availableSizes.first;
+    _selectedColor ??= _availableColorMap.keys.first;
     
     showModalBottomSheet(
       context: context,
@@ -686,7 +682,7 @@ class _GoodsDetailPageState extends State<GoodsDetailPage> {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(
-                    '${widget.goods.gname} (${_selectedSize}/${_selectedColor}) ${_purchaseQuantity}개가 장바구니에 담겼습니다.',
+                    '${widget.goods.gname} ($_selectedSize/$_selectedColor) $_purchaseQuantity개가 장바구니에 담겼습니다.',
                   ),
                 ),
               );

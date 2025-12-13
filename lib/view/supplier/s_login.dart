@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:xyz_project_01/supplier/s_main.dart';
+import 'package:xyz_project_01/view/supplier/s_main.dart';
 import 'package:xyz_project_01/util/message.dart';
 import 'package:xyz_project_01/vm/database/supplier_database.dart';
 

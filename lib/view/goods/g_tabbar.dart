@@ -3,11 +3,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:xyz_project_01/controller/store_controller.dart';
-import 'package:xyz_project_01/goods/g_basket.dart';
-import 'package:xyz_project_01/goods/g_category.dart';
-import 'package:xyz_project_01/goods/g_main.dart';
-import 'package:xyz_project_01/goods/g_map.dart';
-import 'package:xyz_project_01/goods/g_profill.dart';
+import 'package:xyz_project_01/view/goods/g_basket.dart';
+import 'package:xyz_project_01/view/goods/g_category.dart';
+import 'package:xyz_project_01/view/goods/g_main.dart';
+import 'package:xyz_project_01/view/goods/g_map.dart';
+import 'package:xyz_project_01/view/goods/g_profill.dart';
 
 class GTabbar extends StatefulWidget {
   final String userid;

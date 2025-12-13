@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 // ⭐️ 추가 임포트: GoodsDetail, Goods 모델
-import 'package:xyz_project_01/insert/goods_detail_page.dart';
+import 'package:xyz_project_01/view/insert/goods_detail_page.dart';
 import 'package:xyz_project_01/model/goods.dart';
 import 'package:xyz_project_01/vm/database/example_data.dart';
 import 'dart:typed_data'; // Uint8List 사용

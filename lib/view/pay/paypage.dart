@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
-import 'package:xyz_project_01/goods/g_map.dart';
-import 'package:xyz_project_01/goods/g_tabbar.dart';
+import 'package:xyz_project_01/view/goods/g_map.dart';
+import 'package:xyz_project_01/view/goods/g_tabbar.dart';
 import 'package:xyz_project_01/model/goods.dart';
 import 'package:xyz_project_01/model/purchase.dart';
 import 'package:xyz_project_01/vm/database/purchase_database.dart';

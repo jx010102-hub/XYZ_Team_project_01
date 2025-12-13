@@ -27,7 +27,7 @@ class _AStockStatusState extends State<AStockStatus> {
   String? _selectedMonth = 'Sep';
   String? _selectedYear = '2025';
 
-  // ✅ 제조사도 DB에서 확인 가능하지만, 기존 구조 유지 위해 일단 선택값도 둠
+  // ✅ 제조사 선택값
   String? _selectedManufacturer;
   String? _selectedProductName;
 
@@ -45,7 +45,7 @@ class _AStockStatusState extends State<AStockStatus> {
   ];
   final List<String> _years = const ['2023', '2024', '2025'];
 
-  // ✅ 더미 제조사 리스트 유지(원하면 DB 기반으로 바꿔줄 수 있음)
+  // ✅ 더미 제조사 리스트 유지
   final List<String> _manufacturers = const ['나이키', '아디다스', 'XYZ'];
 
   @override
@@ -73,9 +73,9 @@ class _AStockStatusState extends State<AStockStatus> {
       if (goodsList.isNotEmpty) {
         _selectedProductName = goodsList.first.gname;
 
-        // ✅ 대표 상품의 manufacturer를 기본 선택 제조사로 세팅(더미 대신 실제 값)
-        _selectedManufacturer = goodsList.first.manufacturer.isNotEmpty
-            ? goodsList.first.manufacturer
+        // ✅ 기본 제조사 세팅(값은 잡되, 드롭다운 items에 없으면 null 처리되게 build에서 처리함)
+        _selectedManufacturer = goodsList.first.manufacturer.trim().isNotEmpty
+            ? goodsList.first.manufacturer.trim()
             : (_manufacturers.isNotEmpty ? _manufacturers.first : null);
 
         _fetchGoodsOptions(goodsList.first.gname);
@@ -96,10 +96,11 @@ class _AStockStatusState extends State<AStockStatus> {
         _selectedGoods = options.first;
         _productCodeController.text = (_selectedGoods!.gseq ?? '').toString();
 
-        // ✅ 대표상품 manufacturer / price도 여기서 최신 반영
-        _selectedManufacturer = options.first.manufacturer.isNotEmpty
-            ? options.first.manufacturer
-            : _selectedManufacturer;
+        // ✅ 여기서도 제조사 최신 반영 (비어있으면 기존 선택 유지)
+        final dbManu = options.first.manufacturer.trim();
+        if (dbManu.isNotEmpty) {
+          _selectedManufacturer = dbManu;
+        }
 
         _selectedSize = options.first.gsize;
         _selectedColor = options.first.gcolor;
@@ -135,13 +136,15 @@ class _AStockStatusState extends State<AStockStatus> {
     final v = _selectedVariant;
     if (v == null) return;
 
-    final String manufacturer = (_selectedManufacturer ?? '').trim().isNotEmpty
-        ? _selectedManufacturer!.trim()
-        : v.manufacturer.trim();
+    // ✅ [핵심 수정 1] 드롭다운 선택 제조사를 우선 사용, 없으면 variant 제조사 사용
+    final String manufacturer =
+        (_selectedManufacturer?.trim().isNotEmpty == true)
+            ? _selectedManufacturer!.trim()
+            : v.manufacturer.trim();
 
     if (manufacturer.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('제조사가 비어있음')),
+        const SnackBar(content: Text('제조사를 선택해주세요')),
       );
       return;
     }
@@ -173,7 +176,6 @@ class _AStockStatusState extends State<AStockStatus> {
       rethrow;
     }
   }
-
 
   // -----------------------
   // UI
@@ -278,7 +280,10 @@ class _AStockStatusState extends State<AStockStatus> {
               ] else ...[
                 _buildDropdown(
                   label: '제조사',
-                  value: _selectedManufacturer,
+                  // ✅ [핵심 수정 2] items에 없는 제조사는 null 처리 (드롭다운 꼬임 방지)
+                  value: (_selectedManufacturer != null && _manufacturers.contains(_selectedManufacturer))
+                      ? _selectedManufacturer
+                      : null,
                   items: _manufacturers,
                   onChanged: (val) => setState(() => _selectedManufacturer = val),
                 ),
@@ -299,6 +304,7 @@ class _AStockStatusState extends State<AStockStatus> {
       child: Padding(
         padding: const EdgeInsets.only(right: 7),
         child: DropdownButtonFormField<String>(
+          // ✅ [핵심 수정 3] initialValue → value 로 변경 (상태 변경 UI 반영 안정화)
           value: _selectedProductName,
           items: productNames.map((String item) {
             return DropdownMenuItem<String>(
@@ -353,6 +359,7 @@ class _AStockStatusState extends State<AStockStatus> {
       child: Padding(
         padding: const EdgeInsets.only(right: 7.0),
         child: DropdownButtonFormField<String>(
+          // ✅ initialValue → value 로 변경
           value: value,
           items: items.map((String item) {
             return DropdownMenuItem<String>(
@@ -410,9 +417,7 @@ class _AStockStatusState extends State<AStockStatus> {
 
           Row(
             children: [
-              // ✅ Image.asset -> Image.memory
               _goodsThumb(goods.mainimage, width: 60, height: 60),
-
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
@@ -432,7 +437,6 @@ class _AStockStatusState extends State<AStockStatus> {
                     ),
                     const SizedBox(height: 6),
 
-                    // ✅ 제조사 / 가격 표시
                     Text(
                       '제조사 : ${goods.manufacturer}',
                       style: const TextStyle(fontSize: 13, color: Colors.black54),
@@ -451,7 +455,6 @@ class _AStockStatusState extends State<AStockStatus> {
     );
   }
 
-  // ✅ 공통 썸네일 위젯
   Widget _goodsThumb(Uint8List? bytes, {double width = 60, double height = 60}) {
     if (bytes == null) {
       return Container(
@@ -553,7 +556,7 @@ class _AStockStatusState extends State<AStockStatus> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '선택 옵션: ${_selectedSize} / ${_selectedColor}',
+                      '선택 옵션: $_selectedSize / $_selectedColor',
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                     Text('현재 재고량: $currentStock개'),
@@ -595,7 +598,6 @@ class _AStockStatusState extends State<AStockStatus> {
     );
   }
 
-  // ✅ 바텀시트도 Image.memory로 교체
   void _showOrderBottomSheet() {
     final Goods? currentVariant = _selectedVariant;
     if (currentVariant == null) return;
@@ -626,7 +628,6 @@ class _AStockStatusState extends State<AStockStatus> {
 
                 Row(
                   children: [
-                    // ✅ Image.asset -> Image.memory
                     _goodsThumb(currentVariant.mainimage, width: 60, height: 60),
                     const SizedBox(width: 10),
 
@@ -646,7 +647,8 @@ class _AStockStatusState extends State<AStockStatus> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            '제조사 : ${currentVariant.manufacturer}',
+                            // ✅ 바텀시트 표시도 “선택된 제조사”가 있으면 그걸 보여주는 게 자연스럽긴 함
+                            '제조사 : ${(_selectedManufacturer?.trim().isNotEmpty == true) ? _selectedManufacturer : currentVariant.manufacturer}',
                             style: const TextStyle(fontSize: 12, color: Colors.black54),
                           ),
                         ],
@@ -738,9 +740,9 @@ class _AStockStatusState extends State<AStockStatus> {
                       onPressed: () async {
                         try {
                           await _processOrder(currentVariant.gseq!, orderQuantity);
-                          Get.back(); // 성공/실패 스낵바 뜬 다음 닫기
+                          Get.back();
+                          Get.snackbar('완료', '발주 요청 저장 완료', backgroundColor: Colors.black, colorText: Colors.white);
                         } catch (e) {
-                          // 여기까지 오면 _processOrder 내부에서 예외를 throw한 케이스
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(content: Text('발주 처리 중 오류: $e')),
                           );

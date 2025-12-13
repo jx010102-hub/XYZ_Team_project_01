@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:xyz_project_01/customer/c_find_id.dart';
-import 'package:xyz_project_01/customer/c_find_pw.dart';
-import 'package:xyz_project_01/customer/c_regist.dart';
-import 'package:xyz_project_01/employee/e_login.dart';
-import 'package:xyz_project_01/goods/g_tabbar.dart';
-import 'package:xyz_project_01/supplier/s_login.dart';
+import 'package:xyz_project_01/view/customer/c_find_id.dart';
+import 'package:xyz_project_01/view/customer/c_find_pw.dart';
+import 'package:xyz_project_01/view/customer/c_regist.dart';
+import 'package:xyz_project_01/view/employee/e_login.dart';
+import 'package:xyz_project_01/view/goods/g_tabbar.dart';
+import 'package:xyz_project_01/view/supplier/s_login.dart';
 import 'package:xyz_project_01/util/message.dart';
 import 'package:xyz_project_01/vm/database/customer_database.dart';
 

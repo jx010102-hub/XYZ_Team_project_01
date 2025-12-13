@@ -487,7 +487,7 @@ class _GMapState extends State<GMap> {
                 distance: formattedDistance,
                 imagePath: store['image'] as String,
               );
-            }).toList(),
+            }),
           ],
         ),
       ),

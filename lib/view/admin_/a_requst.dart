@@ -116,9 +116,9 @@ class _ARequstState extends State<ARequst> {
       
       // 1. 재고 상태 및 상품 정보 재확인
       if (detail.goods == null || detail.goods!.gseq == null) {
-        Get.snackbar('실패', '주문 #${pseq} 승인 실패: 상품 정보를 찾을 수 없습니다.', snackPosition: SnackPosition.BOTTOM);
+        Get.snackbar('실패', '주문 #$pseq 승인 실패: 상품 정보를 찾을 수 없습니다.', snackPosition: SnackPosition.BOTTOM);
       } else if (!detail.isStockSufficient) {
-        Get.snackbar('실패', '주문 #${pseq} 승인 실패: 재고 부족 (${detail.currentStock} < ${purchase.pamount})', snackPosition: SnackPosition.BOTTOM);
+        Get.snackbar('실패', '주문 #$pseq 승인 실패: 재고 부족 (${detail.currentStock} < ${purchase.pamount})', snackPosition: SnackPosition.BOTTOM);
       } else {
         // 2. 재고 차감 로직 실행
         final int goodsUpdateResult = await _goodsDB.updateGoodsQuantity(
@@ -131,20 +131,20 @@ class _ARequstState extends State<ARequst> {
           final int updateResult = await _purchaseDB.updatePurchaseToCompleted(pseq);
 
           if (updateResult > 0) {
-            Get.snackbar('성공', '주문 #${pseq} 승인 완료 및 재고 차감되었습니다. (상태 4)', snackPosition: SnackPosition.BOTTOM);
+            Get.snackbar('성공', '주문 #$pseq 승인 완료 및 재고 차감되었습니다. (상태 4)', snackPosition: SnackPosition.BOTTOM);
             success = true;
           } else {
-            Get.snackbar('실패', '주문 #${pseq} 상태 변경 실패. 재고는 차감되었을 수 있습니다.', snackPosition: SnackPosition.BOTTOM);
+            Get.snackbar('실패', '주문 #$pseq 상태 변경 실패. 재고는 차감되었을 수 있습니다.', snackPosition: SnackPosition.BOTTOM);
           }
         } else {
-             Get.snackbar('실패', '주문 #${pseq} 승인 실패: 재고 차감 DB 오류', snackPosition: SnackPosition.BOTTOM);
+             Get.snackbar('실패', '주문 #$pseq 승인 실패: 재고 차감 DB 오류', snackPosition: SnackPosition.BOTTOM);
         }
       }
       
     } else {
       // 거절 로직
       await _purchaseDB.updatePurchaseStatus(pseq, 0); // 상태 0으로 변경 (취소/거절 가정)
-      Get.snackbar('알림', '주문 #${pseq} 가 거절/취소 처리되었습니다.', snackPosition: SnackPosition.BOTTOM);
+      Get.snackbar('알림', '주문 #$pseq 가 거절/취소 처리되었습니다.', snackPosition: SnackPosition.BOTTOM);
       success = true;
     }
     
@@ -222,7 +222,7 @@ class _ARequstState extends State<ARequst> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('• 총 주문 수량: ${requestedQty} 개', style: const TextStyle(fontWeight: FontWeight.bold)),
+                  Text('• 총 주문 수량: $requestedQty 개', style: const TextStyle(fontWeight: FontWeight.bold)),
                   Text('• 구매자 ID: ${purchase.userid}', style: const TextStyle(color: Colors.grey)),
                   Text('• 결제 금액: ${purchase.ppayprice.toStringAsFixed(0)} 원', style: const TextStyle(color: Colors.grey)),
                 ],

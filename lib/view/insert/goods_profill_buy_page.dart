@@ -175,7 +175,7 @@ class _GoodsProfillBuyPageState
       );
 
       if (statusResult > 0 && goodsResult > 0) {
-        Get.snackbar('성공', '주문 취소가 완료되었으며 재고 ${quantity}개가 복원되었습니다.', snackPosition: SnackPosition.BOTTOM); 
+        Get.snackbar('성공', '주문 취소가 완료되었으며 재고 $quantity개가 복원되었습니다.', snackPosition: SnackPosition.BOTTOM); 
         await _loadAllData(); // 데이터 새로고침
       } else {
         throw Exception('DB 업데이트 실패 (주문 상태 또는 재고)');

@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:xyz_project_01/admin_/a_admin_add.dart';
-import 'package:xyz_project_01/admin_/a_requst.dart';
-import 'package:xyz_project_01/admin_/a_return_request.dart';
-import 'package:xyz_project_01/admin_/a_stock_status.dart';
-import 'package:xyz_project_01/customer/c_login.dart';
+import 'package:xyz_project_01/view/admin_/a_admin_add.dart';
+import 'package:xyz_project_01/view/admin_/a_requst.dart';
+import 'package:xyz_project_01/view/admin_/a_stock_status.dart';
+import 'package:xyz_project_01/view/customer/c_login.dart';
 
 class AMain extends StatefulWidget {
   const AMain({super.key});
@@ -91,7 +90,7 @@ class _AMainState extends State<AMain> {
                     onTap: btn['action'] as VoidCallback,
                   ),
                 );
-              }).toList(),
+              }),
             ],
           ),
         ),

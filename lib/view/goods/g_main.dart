@@ -2,8 +2,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:xyz_project_01/customer/c_login.dart';
-import 'package:xyz_project_01/insert/goods_detail_page.dart';
+import 'package:xyz_project_01/view/customer/c_login.dart';
+import 'package:xyz_project_01/view/insert/goods_detail_page.dart';
 import 'package:xyz_project_01/model/goods.dart';
 import 'package:xyz_project_01/repository/goods_repository.dart';
 import 'dart:math';

@@ -26,7 +26,6 @@ class SupplyOrderDatabase {
     return result;
   }
 
-  // 제조사 이름으로 "대기중" 발주만 조회
   Future<List<SupplyOrder>> queryPendingByManufacturer(String manufacturer) async {
     final Database db = await handler.initializeDB();
     final result = await db.query(
@@ -38,6 +37,37 @@ class SupplyOrderDatabase {
     return result.map((e) => SupplyOrder.fromMap(e)).toList();
   }
 
+  // ✅ 승인 + 재고 반영 (트랜잭션)
+  Future<int> approveOrderAndAddStock({
+    required int oseq,
+    required int gseq,
+    required int qty,
+    required String apprdate,
+  }) async {
+    final Database db = await handler.initializeDB();
+
+    return await db.transaction<int>((txn) async {
+      // 1) 발주 승인 처리
+      final int a = await txn.rawUpdate("""
+        update supply_order
+        set status = 1, apprdate = ?
+        where oseq = ?
+      """, [apprdate, oseq]);
+
+      if (a <= 0) return 0;
+
+      // 2) 재고 반영
+      await txn.rawUpdate("""
+        update goods
+        set gsumamount = gsumamount + ?
+        where gseq = ?
+      """, [qty, gseq]);
+
+      return a;
+    });
+  }
+
+  // 기존 approveOrder는 남겨도 됨
   Future<int> approveOrder(int oseq, String apprdate) async {
     final Database db = await handler.initializeDB();
     return db.rawUpdate("""

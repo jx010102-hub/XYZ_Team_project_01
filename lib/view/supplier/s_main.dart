@@ -83,7 +83,13 @@ class _SMainState extends State<SMain> {
     int success = 0;
     try {
       for (final oseq in _selectedOseqs) {
-        final r = await _orderDB.approveOrder(oseq, apprdate);
+        final order = _pendingOrders.firstWhere((o) => o.oseq == oseq);
+        final r = await _orderDB.approveOrderAndAddStock(
+          oseq: oseq,
+          gseq: order.gseq,
+          qty: order.qty,
+          apprdate: apprdate,
+        );
         if (r > 0) success++;
       }
 
@@ -173,7 +179,7 @@ class _SMainState extends State<SMain> {
                       borderRadius: BorderRadius.circular(30),
                     ),
                     child: Text(
-                      widget.sid,
+                      widget.sname,
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,

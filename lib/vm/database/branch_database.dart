@@ -32,7 +32,7 @@ class BranchDatabase {
       });
       print('✅ DB의 branch 테이블에 ${branches.length}개의 매장 데이터가 초기 등록되었습니다.');
     } else {
-      print('ℹ️ DB의 branch 테이블에 이미 데이터가 존재하여 초기 등록을 건너뜁니다 (현재 ${count}개).');
+      print('ℹ️ DB의 branch 테이블에 이미 데이터가 존재하여 초기 등록을 건너뜁니다 (현재 $count개).');
     }
   }
 

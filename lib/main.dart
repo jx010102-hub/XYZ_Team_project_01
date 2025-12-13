@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:xyz_project_01/controller/store_controller.dart';
-import 'package:xyz_project_01/customer/c_login.dart';
+import 'package:xyz_project_01/view/customer/c_login.dart';
 import 'package:xyz_project_01/vm/database/seed_data.dart'; // SeedData import
 
 void main() async {

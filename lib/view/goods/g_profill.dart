@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:xyz_project_01/insert/goods_profill_buy_page.dart';
+import 'package:xyz_project_01/view/insert/goods_profill_buy_page.dart';
 
 class GProfill extends StatefulWidget {
   final String userid;

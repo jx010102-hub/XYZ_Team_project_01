@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:xyz_project_01/employee/e_login.dart';
+import 'package:xyz_project_01/view/employee/e_login.dart';
 import 'package:xyz_project_01/model/employee.dart';
 import 'package:xyz_project_01/util/message.dart';
 import 'package:xyz_project_01/vm/database/employee_database.dart';

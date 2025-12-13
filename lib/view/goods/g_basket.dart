@@ -113,7 +113,7 @@ class _GBasketState extends State<GBasket> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('$action'),
+          title: Text(action),
           content: const Text('현재 해당 기능은 구현 중입니다. 🚧'),
           actions: <Widget>[
             TextButton(
@@ -314,7 +314,7 @@ class _GBasketState extends State<GBasket> {
         child: Column(
           children: [
             // ⭐️ items 리스트의 모든 항목을 동적으로 빌드
-            ..._items.map((item) => _buildBasketItem(item)).toList(), 
+            ..._items.map((item) => _buildBasketItem(item)), 
             
             const SizedBox(height: 100), // 하단 Floating Bar 공간 확보
           ],
@@ -344,7 +344,7 @@ class _GBasketState extends State<GBasket> {
               GestureDetector(
                 onTap: () => _showNotImplementedDialog(
                     context,
-                    '총 ${_totalQuantity}개 상품 구매하기'
+                    '총 $_totalQuantity개 상품 구매하기'
                 ),
                 child: Container(
                   height: 60,
@@ -352,7 +352,7 @@ class _GBasketState extends State<GBasket> {
                   color: const Color(0xFFE53935), // 빨간 영역
                   alignment: Alignment.center,
                   child: Text(
-                    '${_formatCurrency(_totalPrice)} · 총 ${_totalQuantity}개 상품 구매하기',
+                    '${_formatCurrency(_totalPrice)} · 총 $_totalQuantity개 상품 구매하기',
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 17,

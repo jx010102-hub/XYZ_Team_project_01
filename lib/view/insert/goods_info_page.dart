@@ -111,7 +111,7 @@ class _GoodsInfoPageState extends State<GoodsInfoPage> {
                   ),
                 ],
               );
-            }).toList(),
+            }),
             
             // 3. (임시) 사이즈 정보 섹션 (DB 이미지가 없으므로 하드코딩 에셋 재사용)
             _buildAssetInfoSection(
