@@ -5,12 +5,12 @@ import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 
 import 'package:xyz_project_01/model/goods.dart';
+import 'package:xyz_project_01/util/message.dart';
 import 'package:xyz_project_01/vm/database/goods_database.dart';
 
 import 'package:xyz_project_01/model/supply_order.dart';
 import 'package:xyz_project_01/vm/database/supply_order_database.dart';
 
-// 재고 현황 페이지
 class AStockStatus extends StatefulWidget {
   const AStockStatus({super.key});
 
@@ -19,6 +19,7 @@ class AStockStatus extends StatefulWidget {
 }
 
 class _AStockStatusState extends State<AStockStatus> {
+  // Property
   final GoodsDatabase _goodsDatabase = GoodsDatabase();
   final SupplyOrderDatabase _orderDB = SupplyOrderDatabase();
 
@@ -27,25 +28,27 @@ class _AStockStatusState extends State<AStockStatus> {
   String? _selectedMonth = 'Sep';
   String? _selectedYear = '2025';
 
-  // ✅ 제조사 선택값
   String? _selectedManufacturer;
   String? _selectedProductName;
 
   final TextEditingController _productCodeController = TextEditingController();
 
+  final Message msg = const Message();
+
   List<Goods> _representativeGoodsList = [];
-  Goods? _selectedGoods;
   List<Goods> _goodsOptions = [];
+
+  Goods? _selectedGoods;
   String? _selectedSize;
   String? _selectedColor;
   Goods? _selectedVariant;
 
   final List<String> _months = const [
-    'Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
   ];
   final List<String> _years = const ['2023', '2024', '2025'];
 
-  // ✅ 더미 제조사 리스트 유지
+  // 더미 제조사 리스트(기존 유지)
   final List<String> _manufacturers = const ['나이키', '아디다스', 'XYZ'];
 
   @override
@@ -60,9 +63,14 @@ class _AStockStatusState extends State<AStockStatus> {
     super.dispose();
   }
 
-  // -----------------------
+  void _resetVariantSelection() {
+    _selectedSize = null;
+    _selectedColor = null;
+    _selectedVariant = null;
+  }
+
+
   // DB
-  // -----------------------
   Future<void> _fetchRepresentativeGoods() async {
     final goodsList = await _goodsDatabase.queryRepresentativeGoods();
     if (!mounted) return;
@@ -73,12 +81,19 @@ class _AStockStatusState extends State<AStockStatus> {
       if (goodsList.isNotEmpty) {
         _selectedProductName = goodsList.first.gname;
 
-        // ✅ 기본 제조사 세팅(값은 잡되, 드롭다운 items에 없으면 null 처리되게 build에서 처리함)
-        _selectedManufacturer = goodsList.first.manufacturer.trim().isNotEmpty
-            ? goodsList.first.manufacturer.trim()
+        final dbManu = goodsList.first.manufacturer.trim();
+        _selectedManufacturer = dbManu.isNotEmpty
+            ? dbManu
             : (_manufacturers.isNotEmpty ? _manufacturers.first : null);
 
         _fetchGoodsOptions(goodsList.first.gname);
+      } else {
+        _selectedProductName = null;
+        _selectedManufacturer = null;
+        _goodsOptions = [];
+        _selectedGoods = null;
+        _productCodeController.text = '';
+        _resetVariantSelection();
       }
     });
   }
@@ -94,9 +109,11 @@ class _AStockStatusState extends State<AStockStatus> {
 
       if (options.isNotEmpty) {
         _selectedGoods = options.first;
-        _productCodeController.text = (_selectedGoods!.gseq ?? '').toString();
 
-        // ✅ 여기서도 제조사 최신 반영 (비어있으면 기존 선택 유지)
+        final gseq = _selectedGoods!.gseq;
+        _productCodeController.text = (gseq ?? '').toString();
+
+        // 제조사 최신 반영(비어있으면 기존 선택 유지)
         final dbManu = options.first.manufacturer.trim();
         if (dbManu.isNotEmpty) {
           _selectedManufacturer = dbManu;
@@ -107,18 +124,18 @@ class _AStockStatusState extends State<AStockStatus> {
         _selectedVariant = options.first;
       } else {
         _selectedGoods = null;
-        _selectedSize = null;
-        _selectedColor = null;
-        _selectedVariant = null;
+        _productCodeController.text = '';
+        _resetVariantSelection();
       }
     });
   }
 
   Future<void> _selectGoodsVariant(String size, String color) async {
-    if (_selectedProductName == null) return;
+    final name = _selectedProductName;
+    if (name == null) return;
 
     final variant = await _goodsDatabase.getGoodsVariant(
-      gname: _selectedProductName!,
+      gname: name,
       gsize: size,
       gcolor: color,
     );
@@ -131,21 +148,18 @@ class _AStockStatusState extends State<AStockStatus> {
     });
   }
 
-  // ✅ 발주 요청 (supply_order 테이블로 저장)
+  // 발주 요청
   Future<void> _processOrder(int gseq, int quantity) async {
     final v = _selectedVariant;
     if (v == null) return;
 
-    // ✅ [핵심 수정 1] 드롭다운 선택 제조사를 우선 사용, 없으면 variant 제조사 사용
     final String manufacturer =
         (_selectedManufacturer?.trim().isNotEmpty == true)
             ? _selectedManufacturer!.trim()
             : v.manufacturer.trim();
 
     if (manufacturer.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('제조사를 선택해주세요')),
-      );
+      msg.error('오류', '제조사를 선택해주세요');
       return;
     }
 
@@ -153,7 +167,7 @@ class _AStockStatusState extends State<AStockStatus> {
 
     final order = SupplyOrder(
       manufacturer: manufacturer,
-      requester: '',
+      requester: '', // 기존 유지(나중에 로그인 직원 정보 연결 가능)
       gseq: v.gseq!,
       gname: v.gname,
       gsize: v.gsize,
@@ -165,23 +179,22 @@ class _AStockStatusState extends State<AStockStatus> {
 
     try {
       final int result = await _orderDB.insertOrder(order);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(result > 0 ? '발주 요청 저장 완료' : '발주 요청 저장 실패')),
-      );
+      if (result > 0) {
+        msg.success('완료', '발주 요청 저장 완료');
+      } else {
+        msg.error('실패', '발주 요청 저장 실패');
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('DB insert 오류: $e')),
-      );
+      msg.error('오류', '$e');
       rethrow;
     }
   }
 
-  // -----------------------
-  // UI
-  // -----------------------
+  // ---------------- build ----------------
   @override
   Widget build(BuildContext context) {
+    final Goods? goods = _selectedGoods;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('재고 현황', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -198,34 +211,29 @@ class _AStockStatusState extends State<AStockStatus> {
           children: [
             _buildFilterAndSearchSection(),
             const Divider(height: 1, thickness: 1),
-
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
               child: _buildProductCodeSearch(),
             ),
             const Divider(height: 1, thickness: 1),
-
-            if (_selectedGoods != null)
+            if (goods != null)
               Padding(
                 padding: const EdgeInsets.all(16.0),
-                child: _buildStockDetailCard(_selectedGoods!),
+                child: _buildStockDetailCard(goods),
               ),
-
             if (_selectedVariant != null) _buildStockInfoSection(),
-
-            if (_selectedGoods == null && _selectedTab == 1)
+            if (goods == null && _selectedTab == 1)
               const Center(
                 child: Padding(
                   padding: EdgeInsets.all(20.0),
                   child: Text('조회할 상품을 선택해주세요.'),
                 ),
               ),
-
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: SizedBox(
                 width: double.infinity,
-                height: 50,
+                height: 50, // ✅ 크기 고정은 유지
                 child: ElevatedButton(
                   onPressed: _selectedVariant != null ? _showOrderBottomSheet : null,
                   style: ElevatedButton.styleFrom(
@@ -244,8 +252,9 @@ class _AStockStatusState extends State<AStockStatus> {
         ),
       ),
     );
-  }
+  } // build
 
+  // ---------------- Functions ----------------
   Widget _buildFilterAndSearchSection() {
     return Padding(
       padding: const EdgeInsets.all(16.0),
@@ -255,42 +264,45 @@ class _AStockStatusState extends State<AStockStatus> {
           Row(
             children: [
               _buildTabButton(text: '일자별 현황', index: 0),
-              const SizedBox(width: 10),
-              _buildTabButton(text: '제품별 현황', index: 1),
+              Padding(
+                padding: const EdgeInsets.only(left: 10),
+                child: _buildTabButton(text: '제품별 현황', index: 1),
+              ),
             ],
           ),
-          const SizedBox(height: 15),
-
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              if (_selectedTab == 0) ...[
-                _buildDropdown(
-                  label: '월별',
-                  value: _selectedMonth,
-                  items: _months,
-                  onChanged: (val) => setState(() => _selectedMonth = val),
-                ),
-                _buildDropdown(
-                  label: '연도',
-                  value: _selectedYear,
-                  items: _years,
-                  onChanged: (val) => setState(() => _selectedYear = val),
-                ),
-              ] else ...[
-                _buildDropdown(
-                  label: '제조사',
-                  // ✅ [핵심 수정 2] items에 없는 제조사는 null 처리 (드롭다운 꼬임 방지)
-                  value: (_selectedManufacturer != null && _manufacturers.contains(_selectedManufacturer))
-                      ? _selectedManufacturer
-                      : null,
-                  items: _manufacturers,
-                  onChanged: (val) => setState(() => _selectedManufacturer = val),
-                ),
-                _buildGoodsNameDropdown(),
+          Padding(
+            padding: const EdgeInsets.only(top: 15),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                if (_selectedTab == 0) ...[
+                  _buildDropdown(
+                    label: '월별',
+                    value: _selectedMonth,
+                    items: _months,
+                    onChanged: (val) => setState(() => _selectedMonth = val),
+                  ),
+                  _buildDropdown(
+                    label: '연도',
+                    value: _selectedYear,
+                    items: _years,
+                    onChanged: (val) => setState(() => _selectedYear = val),
+                  ),
+                ] else ...[
+                  _buildDropdown(
+                    label: '제조사',
+                    value: (_selectedManufacturer != null &&
+                            _manufacturers.contains(_selectedManufacturer))
+                        ? _selectedManufacturer
+                        : null,
+                    items: _manufacturers,
+                    onChanged: (val) => setState(() => _selectedManufacturer = val),
+                  ),
+                  _buildGoodsNameDropdown(),
+                ],
+                const Spacer(),
               ],
-              const Spacer(),
-            ],
+            ),
           ),
         ],
       ),
@@ -299,24 +311,21 @@ class _AStockStatusState extends State<AStockStatus> {
 
   Widget _buildGoodsNameDropdown() {
     final productNames = _representativeGoodsList.map((g) => g.gname).toList();
-
     return Flexible(
       child: Padding(
         padding: const EdgeInsets.only(right: 7),
         child: DropdownButtonFormField<String>(
-          // ✅ [핵심 수정 3] initialValue → value 로 변경 (상태 변경 UI 반영 안정화)
           value: _selectedProductName,
-          items: productNames.map((String item) {
+          items: productNames.map((item) {
             return DropdownMenuItem<String>(
               value: item,
               child: Text(item, style: const TextStyle(fontSize: 14)),
             );
           }).toList(),
-          onChanged: (String? newValue) {
-            if (newValue != null) {
-              setState(() => _selectedProductName = newValue);
-              _fetchGoodsOptions(newValue);
-            }
+          onChanged: (newValue) {
+            if (newValue == null) return;
+            setState(() => _selectedProductName = newValue);
+            _fetchGoodsOptions(newValue);
           },
           decoration: const InputDecoration(
             labelText: '제품명',
@@ -353,15 +362,14 @@ class _AStockStatusState extends State<AStockStatus> {
     required String label,
     required String? value,
     required List<String> items,
-    required Function(String?) onChanged,
+    required ValueChanged<String?> onChanged,
   }) {
     return Flexible(
       child: Padding(
         padding: const EdgeInsets.only(right: 7.0),
         child: DropdownButtonFormField<String>(
-          // ✅ initialValue → value 로 변경
           value: value,
-          items: items.map((String item) {
+          items: items.map((item) {
             return DropdownMenuItem<String>(
               value: item,
               child: Text(item, style: const TextStyle(fontSize: 14)),
@@ -396,7 +404,6 @@ class _AStockStatusState extends State<AStockStatus> {
     );
   }
 
-  // ✅ 카드에서 manufacturer / price 확인 가능하도록 추가
   Widget _buildStockDetailCard(Goods goods) {
     final priceText = NumberFormat('#,###').format(goods.price);
 
@@ -413,42 +420,50 @@ class _AStockStatusState extends State<AStockStatus> {
             '제품코드 : ${goods.gseq.toString()}',
             style: const TextStyle(fontSize: 14, color: Colors.grey),
           ),
-          const SizedBox(height: 8),
 
-          Row(
-            children: [
-              _goodsThumb(goods.mainimage, width: 60, height: 60),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      goods.gname,
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Row(
+              children: [
+                _goodsThumb(goods.mainimage, width: 60, height: 60),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 10),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          goods.gname,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          goods.gengname,
+                          style: const TextStyle(fontSize: 14, color: Colors.grey),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.only(top: 6),
+                          child: Text(
+                            '제조사 : ${goods.manufacturer}',
+                            style: const TextStyle(fontSize: 13, color: Colors.black54),
+                          ),
+                        ),
+                        Text(
+                          '가격 : $priceText원',
+                          style: const TextStyle(fontSize: 13, color: Colors.black54),
+                        ),
+                      ],
                     ),
-                    Text(
-                      goods.gengname,
-                      style: const TextStyle(fontSize: 14, color: Colors.grey),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 6),
-
-                    Text(
-                      '제조사 : ${goods.manufacturer}',
-                      style: const TextStyle(fontSize: 13, color: Colors.black54),
-                    ),
-                    Text(
-                      '가격 : $priceText원',
-                      style: const TextStyle(fontSize: 13, color: Colors.black54),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
@@ -467,14 +482,10 @@ class _AStockStatusState extends State<AStockStatus> {
         child: const Icon(Icons.inventory_2_outlined, color: Colors.grey),
       );
     }
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(10),
-      child: Image.memory(
-        bytes,
-        width: width,
-        height: height,
-        fit: BoxFit.cover,
-      ),
+      child: Image.memory(bytes, width: width, height: height, fit: BoxFit.cover),
     );
   }
 
@@ -486,93 +497,120 @@ class _AStockStatusState extends State<AStockStatus> {
     const int maxStock = 100;
     final double stockRatio = currentStock / maxStock;
 
+    final selectedSize = _selectedSize;
+    final selectedColor = _selectedColor;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text('size', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8.0,
-            children: uniqueSizes.map((size) {
-              return _buildOptionTag(
-                size,
-                _selectedSize,
-                () => _selectGoodsVariant(size, _selectedColor!),
-              );
-            }).toList(),
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Wrap(
+              spacing: 8.0,
+              children: uniqueSizes.map((size) {
+                return _buildOptionTag(
+                  text: size,
+                  selectedValue: selectedSize,
+                  onTap: () {
+                    final c = selectedColor;
+                    if (c == null) return;
+                    _selectGoodsVariant(size, c);
+                  },
+                );
+              }).toList(),
+            ),
           ),
-          const SizedBox(height: 20),
 
-          const Text('color', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8.0,
-            children: uniqueColors.map((color) {
-              return _buildOptionTag(
-                color,
-                _selectedColor,
-                () => _selectGoodsVariant(_selectedSize!, color),
-              );
-            }).toList(),
+          Padding(
+            padding: const EdgeInsets.only(top: 20),
+            child: const Text('color', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
           ),
-          const SizedBox(height: 20),
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Wrap(
+              spacing: 8.0,
+              children: uniqueColors.map((color) {
+                return _buildOptionTag(
+                  text: color,
+                  selectedValue: selectedColor,
+                  onTap: () {
+                    final s = selectedSize;
+                    if (s == null) return;
+                    _selectGoodsVariant(s, color);
+                  },
+                );
+              }).toList(),
+            ),
+          ),
 
-          const Text('재고 현황', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-          const SizedBox(height: 10),
-
-          Row(
-            children: [
-              SizedBox(
-                width: 100,
-                height: 100,
-                child: CustomPaint(
-                  painter: _StockPainter(stockRatio: stockRatio),
-                  child: Center(
+          Padding(
+            padding: const EdgeInsets.only(top: 20),
+            child: const Text('재고 현황', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(top: 10),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 100,
+                  height: 100, // ✅ 크기 고정은 유지
+                  child: CustomPaint(
+                    painter: _StockPainter(stockRatio: stockRatio),
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            '$currentStock/$maxStock',
+                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                          ),
+                          Text(
+                            '${(stockRatio * 100).toInt()}%',
+                            style: TextStyle(
+                              fontSize: 18,
+                              color: Colors.orange.shade600,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 20),
                     child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          '$currentStock/$maxStock',
-                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                          '선택 옵션: $selectedSize / $selectedColor',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
-                        Text(
-                          '${(stockRatio * 100).toInt()}%',
-                          style: TextStyle(
-                            fontSize: 18,
-                            color: Colors.orange.shade600,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                        Text('현재 재고량: $currentStock개'),
+                        const Text('총 판매량: 0개 (더미)'),
                       ],
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 20),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '선택 옵션: $_selectedSize / $_selectedColor',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    Text('현재 재고량: $currentStock개'),
-                    const Text('총 판매량: 0개 (더미)'),
-                  ],
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
-          const SizedBox(height: 20),
+
+          const Padding(padding: EdgeInsets.only(bottom: 20)),
         ],
       ),
     );
   }
 
-  Widget _buildOptionTag(String text, String? selectedValue, VoidCallback onTap) {
+  Widget _buildOptionTag({
+    required String text,
+    required String? selectedValue,
+    required VoidCallback onTap,
+  }) {
     final isSelected = text == selectedValue;
 
     return GestureDetector(
@@ -607,7 +645,7 @@ class _AStockStatusState extends State<AStockStatus> {
 
     Get.bottomSheet(
       StatefulBuilder(
-        builder: (BuildContext context, StateSetter setModalState) {
+        builder: (context, setModalState) {
           return Container(
             padding: const EdgeInsets.all(20),
             decoration: const BoxDecoration(
@@ -625,47 +663,48 @@ class _AStockStatusState extends State<AStockStatus> {
                   ),
                 ),
                 const Divider(),
-
                 Row(
                   children: [
                     _goodsThumb(currentVariant.mainimage, width: 60, height: 60),
-                    const SizedBox(width: 10),
-
                     Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            currentVariant.gname,
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          Text(
-                            '제품코드 : ${currentVariant.gseq.toString()}',
-                            style: const TextStyle(fontSize: 12, color: Colors.grey),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            // ✅ 바텀시트 표시도 “선택된 제조사”가 있으면 그걸 보여주는 게 자연스럽긴 함
-                            '제조사 : ${(_selectedManufacturer?.trim().isNotEmpty == true) ? _selectedManufacturer : currentVariant.manufacturer}',
-                            style: const TextStyle(fontSize: 12, color: Colors.black54),
-                          ),
-                        ],
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 10),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              currentVariant.gname,
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(
+                              '제품코드 : ${currentVariant.gseq.toString()}',
+                              style: const TextStyle(fontSize: 12, color: Colors.grey),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.only(top: 4),
+                              child: Text(
+                                '제조사 : ${(_selectedManufacturer?.trim().isNotEmpty == true) ? _selectedManufacturer : currentVariant.manufacturer}',
+                                style: const TextStyle(fontSize: 12, color: Colors.black54),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],
                 ),
                 const Divider(),
-
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _buildModalTag(currentVariant.gsize, onTap: () {}),
-                    const SizedBox(width: 10),
-                    _buildModalTag(currentVariant.gcolor, onTap: () {}),
+                    _buildModalTag(currentVariant.gsize),
+                    Padding(
+                      padding: const EdgeInsets.only(left: 10),
+                      child: _buildModalTag(currentVariant.gcolor),
+                    ),
                     const Spacer(),
-
                     Container(
                       decoration: BoxDecoration(
                         border: Border.all(color: Colors.grey.shade400),
@@ -719,44 +758,44 @@ class _AStockStatusState extends State<AStockStatus> {
                     ),
                   ],
                 ),
-
-                const SizedBox(height: 30),
-
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    TextButton(
-                      onPressed: () => Get.back(),
-                      style: TextButton.styleFrom(
-                        backgroundColor: Colors.grey[300],
-                        foregroundColor: Colors.black,
-                        padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                Padding(
+                  padding: const EdgeInsets.only(top: 30),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Get.back(),
+                        style: TextButton.styleFrom(
+                          backgroundColor: Colors.grey[300],
+                          foregroundColor: Colors.black,
+                          padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        child: const Text('취소', style: TextStyle(fontWeight: FontWeight.bold)),
                       ),
-                      child: const Text('취소', style: TextStyle(fontWeight: FontWeight.bold)),
-                    ),
-                    const SizedBox(width: 10),
-                    ElevatedButton(
-                      onPressed: () async {
-                        try {
-                          await _processOrder(currentVariant.gseq!, orderQuantity);
-                          Get.back();
-                          Get.snackbar('완료', '발주 요청 저장 완료', backgroundColor: Colors.black, colorText: Colors.white);
-                        } catch (e) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('발주 처리 중 오류: $e')),
-                          );
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.black,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      Padding(
+                        padding: const EdgeInsets.only(left: 10),
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            try {
+                              await _processOrder(currentVariant.gseq!, orderQuantity);
+                              Get.back();
+                              msg.success('완료', '발주 요청 저장 완료');
+                            } catch (e) {
+                              msg.error('오류', '발주 처리 중 오류: $e');
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.black,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                          child: const Text('발주 신청하기', style: TextStyle(fontWeight: FontWeight.bold)),
+                        ),
                       ),
-                      child: const Text('발주 신청하기', style: TextStyle(fontWeight: FontWeight.bold)),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -767,29 +806,27 @@ class _AStockStatusState extends State<AStockStatus> {
     );
   }
 
-  Widget _buildModalTag(String text, {required VoidCallback onTap}) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        decoration: BoxDecoration(
-          color: Colors.grey[100],
-          borderRadius: BorderRadius.circular(5),
-          border: Border.all(color: Colors.black, width: 2),
-        ),
-        child: Text(text, style: const TextStyle(fontWeight: FontWeight.bold)),
+  Widget _buildModalTag(String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(5),
+        border: Border.all(color: Colors.black, width: 2),
       ),
+      child: Text(text, style: const TextStyle(fontWeight: FontWeight.bold)),
     );
   }
 }
 
-// 원형 그래프 페인터
 class _StockPainter extends CustomPainter {
   final double stockRatio;
   _StockPainter({required this.stockRatio});
 
   @override
   void paint(Canvas canvas, Size size) {
+    const pi = 3.1415926535;
+
     final center = Offset(size.width / 2, size.height / 2);
     final radius = size.width / 2;
 
@@ -806,11 +843,11 @@ class _StockPainter extends CustomPainter {
 
     canvas.drawCircle(center, radius - 5, backgroundPaint);
 
-    final sweepAngle = 2 * 3.1415926535 * stockRatio.clamp(0.0, 1.0);
+    final sweepAngle = 2 * pi * stockRatio.clamp(0.0, 1.0);
 
     canvas.drawArc(
       Rect.fromCircle(center: center, radius: radius - 5),
-      -3.1415926535 / 2,
+      -pi / 2,
       sweepAngle,
       false,
       dataPaint,

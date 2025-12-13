@@ -1,18 +1,30 @@
+// lib/main.dart
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:xyz_project_01/controller/store_controller.dart';
 import 'package:xyz_project_01/view/customer/c_login.dart';
-import 'package:xyz_project_01/vm/database/seed_data.dart'; // SeedData import
+import 'package:xyz_project_01/vm/database/seed_data.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // ⭐️ DB 초기화 및 예시 데이터 삽입 로직 호출
-  final seed = SeedData();
-  await seed.insertExampleData();
-
   Get.put(StoreController(), permanent: true);
+
   runApp(const MyApp());
+
+
+  // 디버그에서만 실행
+  if (kDebugMode) {
+    try {
+      final seed = SeedData();
+      await seed.insertExampleData();
+      debugPrint('[SeedData] done');
+    } catch (e, st) {
+      debugPrint('[SeedData] failed: $e');
+      debugPrint('$st');
+    }
+  }
 }
 
 class MyApp extends StatelessWidget {
@@ -24,17 +36,10 @@ class MyApp extends StatelessWidget {
       title: 'Flutter Demo',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color.fromARGB(
-            255,
-            255,
-            255,
-            255,
-          ),
+          seedColor: const Color.fromARGB(255, 255, 255, 255),
         ),
       ),
-      // 시작 페이지는 GMain이 아닌 CLogin으로 가정하고 그대로 둡니다.
       home: CLogin(),
-      // 만약 바로 GMain을 보려면 home: GMain()으로 변경하세요.
     );
   }
 }

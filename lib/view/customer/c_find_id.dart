@@ -8,15 +8,21 @@ class CFindId extends StatefulWidget {
 }
 
 class _CFindIdState extends State<CFindId> {
-  //Property
-  late TextEditingController nameController;
-  late TextEditingController phoneController;
+  late final TextEditingController nameController;
+  late final TextEditingController phoneController;
 
   @override
   void initState() {
     super.initState();
     nameController = TextEditingController();
     phoneController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    nameController.dispose();
+    phoneController.dispose();
+    super.dispose();
   }
 
   @override
@@ -34,46 +40,50 @@ class _CFindIdState extends State<CFindId> {
                   padding: const EdgeInsets.all(20.0),
                   child: Image.asset('images/logo.png'),
                 ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(0, 0, 0, 70),
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 70),
                   child: Text(
                     '이메일 찾기',
-                    style: TextStyle(
-                      fontSize: 25
+                    style: TextStyle(fontSize: 25),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: TextField(
+                    controller: nameController,
+                    decoration: const InputDecoration(
+                      labelText: '이름',
                     ),
                   ),
                 ),
-                TextField(
-                    controller: nameController,
-                    decoration: InputDecoration(
-                      labelText: '이름'
-                    ),
-                  ),
-                TextField(
-                    controller: phoneController,
-                    decoration: InputDecoration(
-                      labelText: '전화번호'
-                    ),
-                  ),
                 Padding(
-                    padding: const EdgeInsets.fromLTRB(0, 70, 0, 30),
-                    child: ElevatedButton(
-                      onPressed: (){
-                        //
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.black,
-                        foregroundColor: Colors.white,
-                        minimumSize: Size(350, 50)
-                      ),
-                      child: Text('이메일 찾기')
+                  padding: const EdgeInsets.only(bottom: 70),
+                  child: TextField(
+                    controller: phoneController,
+                    decoration: const InputDecoration(
+                      labelText: '전화번호',
                     ),
                   ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 30),
+                  child: ElevatedButton(
+                    onPressed: () {
+                      // 기존 기능 유지(비어있음)
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.black,
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size(350, 50),
+                    ),
+                    child: const Text('이메일 찾기'),
+                  ),
+                ),
               ],
             ),
           ),
         ),
       ),
     );
-  } // build
-} // class
+  }
+}

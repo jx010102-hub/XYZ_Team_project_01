@@ -12,14 +12,13 @@ class SLogin extends StatefulWidget {
 }
 
 class _SLoginState extends State<SLogin> {
-  // Property
-  late TextEditingController idController;
-  late TextEditingController nameController;
-  late SupplierDatabase supplier;
-  late bool i; // 로그인 체크
-  late int imageTapCount;
+  late final TextEditingController idController;
+  late final TextEditingController nameController;
+  late final SupplierDatabase supplier;
 
-  Message message = Message();
+  final Message message = Message();
+
+  // ✅ 미사용/더미 정리: i, imageTapCount 제거
 
   @override
   void initState() {
@@ -27,17 +26,21 @@ class _SLoginState extends State<SLogin> {
     idController = TextEditingController();
     nameController = TextEditingController();
     supplier = SupplierDatabase();
-    i = false;
-    imageTapCount = 0;
+  }
+
+  @override
+  void dispose() {
+    idController.dispose();
+    nameController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(),
-      body: 
-        SingleChildScrollView(
-          child: Center(
+      body: SingleChildScrollView(
+        child: Center(
           child: SizedBox(
             width: 350,
             child: Padding(
@@ -46,58 +49,62 @@ class _SLoginState extends State<SLogin> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(0, 0, 0, 50),
-                    child: Image.asset('images/supplier_logo.png',
-                    scale: 8,),
+                    padding: const EdgeInsets.only(bottom: 50),
+                    child: Image.asset(
+                      'images/supplier_logo.png',
+                      scale: 8,
+                    ),
                   ),
                   TextField(
                     controller: idController,
-                    decoration: InputDecoration(
+                    decoration: const InputDecoration(
                       labelText: '제조사 아이디를 입력하세요',
                     ),
                   ),
                   TextField(
                     controller: nameController,
-                    decoration: InputDecoration(
-                      labelText: '제조사 이름을 입력하세요'
+                    decoration: const InputDecoration(
+                      labelText: '제조사 이름을 입력하세요',
                     ),
                     obscureText: false,
                   ),
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(0, 30, 0, 60),
+                    padding: const EdgeInsets.only(top: 30, bottom: 60),
                     child: ElevatedButton(
-                      onPressed: (){
-                        checkLogin();
-                      },
+                      onPressed: checkLogin,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.black,
                         foregroundColor: Colors.white,
-                        minimumSize: Size(350, 50)
+                        minimumSize: const Size(350, 50),
                       ),
-                      child: Text('로그인')
+                      child: const Text('로그인'),
                     ),
                   ),
                 ],
               ),
             ),
           ),
-                ),
         ),
+      ),
     );
-  } // build
+  }
 
-  void checkLogin() async{
-    // id, pw가 비어있을 경우
-    if(idController.text.trim().isEmpty ||
-       nameController.text.trim().isEmpty){
-      i=true;
-      message.snackBar('오류', '제조사 아이디와 이름이 올바르지 않습니다.');
-    }else{
-    // 정상적인 경우
+  Future<void> checkLogin() async {
     final id = idController.text.trim();
     final name = nameController.text.trim();
-    final result = await supplier.loginCheck(id, name);
-      if(result){
+
+    // ✅ 입력값 체크 (기능 동일)
+    if (id.isEmpty || name.isEmpty) {
+      message.error('오류', '제조사 아이디와 이름이 올바르지 않습니다.');
+      return;
+    }
+
+    try {
+      final result = await supplier.loginCheck(id, name);
+
+      if (!mounted) return;
+
+      if (result) {
         Get.defaultDialog(
           title: '로그인',
           middleText: '로그인 되었습니다.',
@@ -105,22 +112,18 @@ class _SLoginState extends State<SLogin> {
           barrierDismissible: false,
           actions: [
             TextButton(
-              onPressed: () {
-                Get.offAll(SMain(sid: id, sname: name));
-              },
-              style: TextButton.styleFrom(
-                  foregroundColor: Colors.black,
-              ),
-              child: Text('OK'),
+              onPressed: () => Get.offAll(SMain(sid: id, sname: name)),
+              style: TextButton.styleFrom(foregroundColor: Colors.black),
+              child: const Text('OK'),
             ),
           ],
         );
-      }else{
-    // id, pw가 틀렸을 경우
-        i=false;
-        message.snackBar('오류', '제조사 아이디와 이름이 올바르지 않습니다.');
+      } else {
+        message.error('오류', '제조사 아이디와 이름이 올바르지 않습니다.');
       }
+    } catch (e) {
+      if (!mounted) return;
+      message.error('오류', '로그인 처리 중 오류: $e');
     }
-    setState(() {});
   }
-} // class
+}

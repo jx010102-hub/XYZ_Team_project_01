@@ -1,22 +1,21 @@
 import 'dart:typed_data';
 
-class Goods {           // 신발 (상품)
-
+class Goods {           // 신발(상품)
   int? gseq;            // 제품 번호 (PK, AI)
-  int gsumamount;       // 총 재고량
+  int gsumamount;       // 재고량
   String gname;         // 제품명
-  String gengname;      // 제품명 (영문)
+  String gengname;      // 제품명(영문)
   String gsize;         // 사이즈
   String gcolor;        // 색상
   String gcategory;     // 카테고리
-  double price;        // ⭐ double로 변경
-  String manufacturer;      // 제조사 이름
+  double price;         // 가격
+  String manufacturer;  // 제조사 이름(Supplier.sname)
   Uint8List? mainimage; // main 이미지
   Uint8List? topimage;  // top 이미지
   Uint8List? backimage; // back 이미지
   Uint8List? sideimage; // side 이미지
 
-  Goods({ 
+  Goods({
     this.gseq,
     required this.gsumamount,
     required this.gname,
@@ -32,18 +31,35 @@ class Goods {           // 신발 (상품)
     this.sideimage,
   });
 
-  Goods.fromMap(Map<String, dynamic> res)
-  : gseq = res['gseq'] as int?,
-    gsumamount = (res['gsumamount'] as int?) ?? 0,
-    gname = (res['gname'] as String?) ?? '',
-    gengname = (res['gengname'] as String?) ?? '',
-    gsize = (res['gsize'] as String?) ?? '',
-    gcolor = (res['gcolor'] as String?) ?? '',
-    gcategory = (res['gcategory'] as String?) ?? '',
-    manufacturer = (res['manufacturer'] as String?) ?? '',
-    price = ((res['price'] as num?)?.toDouble()) ?? 0.0,
-    mainimage = res['mainimage'] as Uint8List?,
-    topimage = res['topimage'] as Uint8List?,
-    backimage = res['backimage'] as Uint8List?,
-    sideimage = res['sideimage'] as Uint8List?;
+  factory Goods.fromMap(Map<String, dynamic> res) => Goods(
+        gseq: res['gseq'] as int?,
+        gsumamount: (res['gsumamount'] as int?) ?? 0,
+        gname: (res['gname'] as String?) ?? '',
+        gengname: (res['gengname'] as String?) ?? '',
+        gsize: (res['gsize'] as String?) ?? '',
+        gcolor: (res['gcolor'] as String?) ?? '',
+        gcategory: (res['gcategory'] as String?) ?? '',
+        price: (res['price'] as num?)?.toDouble() ?? 0.0,
+        manufacturer: (res['manufacturer'] as String?) ?? '',
+        mainimage: res['mainimage'] as Uint8List?,
+        topimage: res['topimage'] as Uint8List?,
+        backimage: res['backimage'] as Uint8List?,
+        sideimage: res['sideimage'] as Uint8List?,
+      );
+
+  Map<String, dynamic> toMap() => {
+        'gseq': gseq,
+        'gsumamount': gsumamount,
+        'gname': gname,
+        'gengname': gengname,
+        'gsize': gsize,
+        'gcolor': gcolor,
+        'gcategory': gcategory,
+        'price': price,
+        'manufacturer': manufacturer,
+        'mainimage': mainimage,
+        'topimage': topimage,
+        'backimage': backimage,
+        'sideimage': sideimage,
+      };
 }

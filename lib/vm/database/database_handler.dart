@@ -1,3 +1,5 @@
+// lib/vm/database/database_handler.dart
+
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
@@ -7,8 +9,7 @@ class DatabaseHandler {
 
     return openDatabase(
       join(path, 'xyz.db'),
-      version: 1, // ✅ 그대로 1 (새로설치할거라 업그레이드 안씀)
-
+      version: 1,
       onCreate: (db, version) async {
         await db.execute("""
           CREATE TABLE customer(
@@ -53,6 +54,7 @@ class DatabaseHandler {
             eseq INTEGER PRIMARY KEY AUTOINCREMENT,
             eemail TEXT,
             epw TEXT,
+            ename TEXT,
             ephone TEXT,
             erank INTEGER,
             erole INTEGER,
@@ -130,16 +132,42 @@ class DatabaseHandler {
             apprdate TEXT
           )
         """);
-
-        // ==========================
-        // ✅ 반품/주문 성능(멈춤) 잡는 핵심: 인덱스
-        // ==========================
-        await db.execute("CREATE INDEX IF NOT EXISTS idx_purchase_userid ON purchase(userid);");
-        await db.execute("CREATE INDEX IF NOT EXISTS idx_purchase_pseq ON purchase(pseq);");
-        await db.execute("CREATE INDEX IF NOT EXISTS idx_purchase_gseq ON purchase(gseq);");
-
-        await db.execute("CREATE INDEX IF NOT EXISTS idx_refund_rpseq ON refund(rpseq);");
-        await db.execute("CREATE INDEX IF NOT EXISTS idx_refund_rstatus ON refund(rstatus);");
+        await db.execute(
+          "CREATE INDEX IF NOT EXISTS idx_goods_gname ON goods(gname);",
+        );
+        await db.execute(
+          "CREATE INDEX IF NOT EXISTS idx_goods_variant ON goods(gname, gsize, gcolor);",
+        );
+        await db.execute(
+          "CREATE INDEX IF NOT EXISTS idx_goods_category ON goods(gcategory);",
+        );
+        await db.execute(
+          "CREATE INDEX IF NOT EXISTS idx_purchase_userid ON purchase(userid);",
+        );
+        await db.execute(
+          "CREATE INDEX IF NOT EXISTS idx_purchase_userid_pseq ON purchase(userid, pseq DESC);",
+        );
+        await db.execute(
+          "CREATE INDEX IF NOT EXISTS idx_purchase_status_pdate ON purchase(pstatus, pdate DESC);",
+        );
+        await db.execute(
+          "CREATE INDEX IF NOT EXISTS idx_purchase_gseq ON purchase(gseq);",
+        );
+        await db.execute(
+          "CREATE INDEX IF NOT EXISTS idx_refund_rpseq ON refund(rpseq);",
+        );
+        await db.execute(
+          "CREATE INDEX IF NOT EXISTS idx_refund_rstatus ON refund(rstatus);",
+        );
+        await db.execute(
+          "CREATE INDEX IF NOT EXISTS idx_refund_rstatus_rseq ON refund(rstatus, rseq DESC);",
+        );
+        await db.execute(
+          "CREATE INDEX IF NOT EXISTS idx_supply_order_manu_status_reqdate ON supply_order(manufacturer, status, reqdate DESC);",
+        );
+        await db.execute(
+          "CREATE INDEX IF NOT EXISTS idx_supply_order_gseq ON supply_order(gseq);",
+        );
       },
     );
   }

@@ -12,6 +12,8 @@ import 'package:xyz_project_01/vm/database/goods_database.dart';
 import 'package:xyz_project_01/vm/database/purchase_database.dart';
 import 'package:xyz_project_01/controller/store_controller.dart';
 
+import 'package:xyz_project_01/util/message.dart';
+
 class PayPage extends StatefulWidget {
   final Goods goods;
   final String selectedSize;
@@ -33,20 +35,31 @@ class PayPage extends StatefulWidget {
 }
 
 class _PayPageState extends State<PayPage> {
-  int _selectedPaymentMethod = 0; // 0: 간편결제, 1: 카드, 2: 매장
-  final StoreController storeController = Get.find<StoreController>();
+  // 0: 간편결제, 1: 카드, 2: 매장
+  int _selectedPaymentMethod = 0;
 
-  String _formatCurrency(int amount) {
-    final formatter = NumberFormat('#,###');
-    return '${formatter.format(amount)}원';
+  final StoreController storeController = Get.find<StoreController>();
+  final Message message = Message();
+
+  static const int _singlePrice = 150000; // 임시 단가
+  static const int _fee = 0;
+
+  final NumberFormat _currencyFormatter = NumberFormat('#,###');
+  final DateFormat _dbFormat = DateFormat('yyyy-MM-dd HH:mm:ss');
+
+  String _formatCurrency(int amount) => '${_currencyFormatter.format(amount)}원';
+
+  int _payWayFromSelected(int selected) {
+    // 기존 로직 유지: 0->1, 1->2, 2->3
+    if (selected == 0) return 1;
+    if (selected == 1) return 2;
+    return 3;
   }
 
   @override
   Widget build(BuildContext context) {
-    const int singlePrice = 150000; // 임시 단가
-    final int subtotal = singlePrice * widget.quantity;
-    const int fee = 0;
-    final int totalAmount = subtotal + fee;
+    final int subtotal = _singlePrice * widget.quantity;
+    final int totalAmount = subtotal + _fee;
 
     return Scaffold(
       appBar: AppBar(
@@ -65,13 +78,13 @@ class _PayPageState extends State<PayPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildReceivingStoreSelection(),
-              const SizedBox(height: 30),
+              const Padding(padding: EdgeInsets.only(top: 30)),
               _buildPurchaseDetails(subtotal),
-              const SizedBox(height: 30),
+              const Padding(padding: EdgeInsets.only(top: 30)),
               _buildPaymentMethod(),
-              const SizedBox(height: 30),
+              const Padding(padding: EdgeInsets.only(top: 30)),
               _buildOrderSummary(subtotal, totalAmount),
-              const SizedBox(height: 120),
+              const Padding(padding: EdgeInsets.only(top: 120)),
             ],
           ),
         ),
@@ -91,7 +104,7 @@ class _PayPageState extends State<PayPage> {
             '수령매장 선택',
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
-          const SizedBox(height: 10),
+          const Padding(padding: EdgeInsets.only(top: 10)),
 
           if (store != null) ...[
             Container(
@@ -110,7 +123,7 @@ class _PayPageState extends State<PayPage> {
                     store['name'] as String,
                     style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                   ),
-                  const SizedBox(height: 4),
+                  const Padding(padding: EdgeInsets.only(top: 4)),
                   Text(
                     '${store['district']} · ${store['address']}',
                     style: const TextStyle(fontSize: 12, color: Colors.grey),
@@ -129,9 +142,7 @@ class _PayPageState extends State<PayPage> {
           ],
 
           ElevatedButton(
-            onPressed: () {
-              Get.to(GMap(userid: widget.userid));
-            },
+            onPressed: () => Get.to(GMap(userid: widget.userid)),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.grey.shade700,
               minimumSize: const Size(double.infinity, 60),
@@ -143,7 +154,7 @@ class _PayPageState extends State<PayPage> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const Icon(Icons.location_on, color: Colors.white),
-                const SizedBox(width: 8),
+                const Padding(padding: EdgeInsets.only(left: 8)),
                 Text(
                   store == null ? '제품을 받을 매장을 선택하세요' : '수령 매장 변경하기',
                   style: const TextStyle(color: Colors.white, fontSize: 16),
@@ -173,7 +184,7 @@ class _PayPageState extends State<PayPage> {
             ),
           ],
         ),
-        const SizedBox(height: 15),
+        const Padding(padding: EdgeInsets.only(top: 15)),
         Container(
           padding: const EdgeInsets.all(15),
           decoration: BoxDecoration(
@@ -193,21 +204,27 @@ class _PayPageState extends State<PayPage> {
                 child: widget.goods.mainimage != null
                     ? ClipRRect(
                         borderRadius: BorderRadius.circular(5),
-                        child: Image.memory(widget.goods.mainimage!, fit: BoxFit.cover),
+                        child: Image.memory(
+                          widget.goods.mainimage!,
+                          fit: BoxFit.cover,
+                        ),
                       )
                     : const Icon(Icons.image, color: Colors.grey),
               ),
-              const SizedBox(width: 10),
+              const Padding(padding: EdgeInsets.only(left: 10)),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(widget.goods.gname, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    Text(
+                      widget.goods.gname,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
                     Text(
                       widget.goods.gengname,
                       style: const TextStyle(color: Colors.grey, fontSize: 12),
                     ),
-                    const SizedBox(height: 5),
+                    const Padding(padding: EdgeInsets.only(top: 5)),
                     Text(
                       '옵션: ${widget.selectedSize} / ${widget.selectedColor}, 수량: ${widget.quantity}개',
                       style: const TextStyle(fontSize: 12, color: Colors.black54),
@@ -219,8 +236,11 @@ class _PayPageState extends State<PayPage> {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   const Text('결제 금액'),
-                  const SizedBox(height: 5),
-                  Text(_formatCurrency(subtotal), style: const TextStyle(fontWeight: FontWeight.bold)),
+                  const Padding(padding: EdgeInsets.only(top: 5)),
+                  Text(
+                    _formatCurrency(subtotal),
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ],
               ),
             ],
@@ -234,8 +254,11 @@ class _PayPageState extends State<PayPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('결제 방법', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 10),
+        const Text(
+          '결제 방법',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        const Padding(padding: EdgeInsets.only(top: 10)),
         _buildPaymentOption(title: '간편 결제', subtitle: '', value: 0),
         const Divider(),
         _buildPaymentOption(title: '신용카드', subtitle: '일시불 + 할부', value: 1),
@@ -265,9 +288,9 @@ class _PayPageState extends State<PayPage> {
               },
               activeColor: Colors.black,
             ),
-            const SizedBox(width: 5),
+            const Padding(padding: EdgeInsets.only(left: 5)),
             Text(title, style: const TextStyle(fontSize: 16)),
-            const SizedBox(width: 10),
+            const Padding(padding: EdgeInsets.only(left: 10)),
             Text(subtitle, style: const TextStyle(fontSize: 14, color: Colors.grey)),
           ],
         ),
@@ -279,8 +302,11 @@ class _PayPageState extends State<PayPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('최종 주문 정보', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 15),
+        const Text(
+          '최종 주문 정보',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        const Padding(padding: EdgeInsets.only(top: 15)),
         _buildSummaryRow('구매가', _formatCurrency(subtotal)),
         const Divider(height: 30, thickness: 1.5),
         _buildSummaryRow('총 결제금액', _formatCurrency(totalAmount), isTotal: true),
@@ -328,12 +354,10 @@ class _PayPageState extends State<PayPage> {
         child: ElevatedButton(
           onPressed: () {
             if (storeController.selectedStore.value == null) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('먼저 수령 매장을 선택해 주세요.')),
-              );
+              message.warning('매장 선택', '먼저 수령 매장을 선택해 주세요.');
               return;
             }
-            _processPaymentAndSave(totalAmount, context);
+            _processPaymentAndSave(totalAmount);
           },
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.grey.shade700,
@@ -342,22 +366,24 @@ class _PayPageState extends State<PayPage> {
           ),
           child: Text(
             '${_formatCurrency(totalAmount)} 결제요청하기',
-            style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
       ),
     );
   }
 
-  Future<void> _processPaymentAndSave(int finalPrice, BuildContext context) async {
+  Future<void> _processPaymentAndSave(int finalPrice) async {
     if (storeController.selectedStore.value == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('수령 매장을 먼저 선택해 주세요.')),
-      );
+      message.warning('매장 선택', '수령 매장을 먼저 선택해 주세요.');
       return;
     }
 
-    // ✅ 0) gseq 확정: DB에서 해당 옵션(이름/사이즈/색상) 다시 조회
+    // 0) gseq 확정: DB에서 해당 옵션(이름/사이즈/색상) 다시 조회
     final goodsDB = GoodsDatabase();
     final variant = await goodsDB.getGoodsVariant(
       gname: widget.goods.gname,
@@ -365,22 +391,17 @@ class _PayPageState extends State<PayPage> {
       gcolor: widget.selectedColor,
     );
 
+    if (!mounted) return;
+
     if (variant == null || variant.gseq == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('❌ 상품 옵션을 DB에서 찾을 수 없습니다. (gseq 없음)')),
-      );
+      message.error('옵션 오류', '상품 옵션을 DB에서 찾을 수 없습니다. (gseq 없음)');
       return;
     }
 
-    final int payWay = (_selectedPaymentMethod == 0)
-        ? 1
-        : (_selectedPaymentMethod == 1)
-            ? 2
-            : 3;
+    final int payWay = _payWayFromSelected(_selectedPaymentMethod);
 
     final now = DateTime.now();
-    final dbFormat = DateFormat('yyyy-MM-dd HH:mm:ss');
-    final dateString = dbFormat.format(now);
+    final dateString = _dbFormat.format(now);
 
     final newPurchase = Purchase(
       pstatus: 2,
@@ -393,7 +414,7 @@ class _PayPageState extends State<PayPage> {
       pdiscount: 0.0,
       userid: widget.userid,
 
-      // ✅ 여기서 반드시 DB에 존재하는 gseq 사용
+      // 반드시 DB에 존재하는 gseq 사용
       gseq: variant.gseq,
       gsize: widget.selectedSize,
       gcolor: widget.selectedColor,
@@ -403,6 +424,8 @@ class _PayPageState extends State<PayPage> {
 
     try {
       final purchaseResult = await purchaseDB.insertPurchase(newPurchase);
+
+      if (!mounted) return;
 
       if (purchaseResult > 0) {
         Get.defaultDialog(
@@ -419,14 +442,11 @@ class _PayPageState extends State<PayPage> {
           ],
         );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('❌ 결제 요청 등록에 실패했습니다.')),
-        );
+        message.error('실패', '결제 요청 등록에 실패했습니다.');
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('❌ 결제 처리 중 오류 발생: $e')),
-      );
+      if (!mounted) return;
+      message.error('오류', '결제 처리 중 오류 발생: $e');
     }
   }
 }

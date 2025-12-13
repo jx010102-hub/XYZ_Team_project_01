@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:xyz_project_01/view/customer/c_login.dart';
 import 'package:xyz_project_01/view/insert/goods_profill_buy_page.dart';
 
 class GProfill extends StatefulWidget {
@@ -11,65 +12,73 @@ class GProfill extends StatefulWidget {
 }
 
 class _GProfillState extends State<GProfill> {
-  // 개별 설정 항목을 빌드하는 함수
-  Widget _buildSettingItem({
-    required String title,
-    VoidCallback? onTap,
-  }) {
-    return Column(
-      children: [
-        ListTile(
-          title: Text(
-            title,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w400,
-              color: Colors.black87,
-            ),
-          ),
-          trailing: const Icon(
-            Icons.arrow_forward_ios,
-            size: 16,
-            color: Colors.grey,
-          ),
-          onTap:
-              onTap ??
-              () {
-                // 기본 동작: 어떤 항목이 클릭되었는지 콘솔에 출력
-                print('"$title" 항목 클릭됨');
-              },
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 20,
-          ),
-        ),
-        // 항목 간 구분선 (알림, 테마, 언어 사이에 사용)
-        if (title != '주문내역' &&
-            title != '알림' &&
-            title != '테마' &&
-            title != '언어' &&
-            title != '회사 정보' &&
-            title != '앱 정보')
-          const Divider(
-            height: 1,
-            thickness: 1,
-            color: Colors.grey,
-          ),
-      ],
+  // 섹션 사이 굵은 구분선
+  Widget _buildSectionDivider() {
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 10.0),
+      child: Divider(
+        height: 8,
+        thickness: 8,
+        color: Colors.black12,
+      ),
     );
   }
 
-  // 섹션 구분선 (굵은 회색 선)을 빌드하는 함수
-  Widget _buildSectionDivider() {
-    return const Padding(
-      padding: EdgeInsets.symmetric(
-        vertical: 10.0,
-        horizontal: 0,
+  // 항목 사이 얇은 구분선
+  Widget _buildThinDivider() {
+    return const Divider(
+      height: 1,
+      thickness: 1,
+      indent: 20,
+      endIndent: 20,
+      color: Colors.grey,
+    );
+  }
+
+  // 개별 설정 항목
+  Widget _buildSettingItem({
+    required String title,
+    VoidCallback? onTap,
+    Color? textColor,
+  }) {
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20),
+      title: Text(
+        title,
+        style: TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.w400,
+          color: textColor ?? Colors.black87,
+        ),
       ),
-      child: Divider(
-        height: 8, // 구분선 자체의 높이 (두께)
-        thickness: 8, // 구분선 자체의 두께
-        color: Colors.black12, // 연한 회색으로 섹션을 구분
+      trailing: const Icon(
+        Icons.arrow_forward_ios,
+        size: 16,
+        color: Colors.grey,
       ),
+      onTap: onTap ??
+          () {
+            debugPrint('"$title" 항목 클릭됨');
+          },
+    );
+  }
+
+  // 항목 + divider 래퍼
+  Widget _buildItemWithDivider({
+    required String title,
+    VoidCallback? onTap,
+    bool showDivider = true,
+    Color? textColor,
+  }) {
+    return Column(
+      children: [
+        _buildSettingItem(
+          title: title,
+          onTap: onTap,
+          textColor: textColor,
+        ),
+        if (showDivider) _buildThinDivider(),
+      ],
     );
   }
 
@@ -77,7 +86,6 @@ class _GProfillState extends State<GProfill> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        // '앱 설정' 타이틀
         title: const Text(
           '앱 설정',
           style: TextStyle(
@@ -87,10 +95,8 @@ class _GProfillState extends State<GProfill> {
           ),
         ),
         backgroundColor: Colors.white,
-        elevation: 0, // AppBar 아래 그림자 제거
-        automaticallyImplyLeading:
-            false, // 뒤로가기 버튼 자동 생성 방지 (탭바 내부에 있으므로)
-        // 오른쪽 상단 종 모양 아이콘
+        elevation: 0,
+        automaticallyImplyLeading: false,
         actions: [
           IconButton(
             icon: const Icon(
@@ -99,73 +105,53 @@ class _GProfillState extends State<GProfill> {
               size: 30,
             ),
             onPressed: () {
-              print('알림 아이콘 클릭됨');
+              debugPrint('알림 아이콘 클릭됨');
             },
           ),
-          const SizedBox(width: 10),
+          const Padding(padding: EdgeInsets.only(right: 10)),
         ],
       ),
-
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            // 이미지의 굵은 상단 구분선
+          children: [
             _buildSectionDivider(),
 
             // --- 첫 번째 섹션 ---
-            _buildSettingItem(
+            _buildItemWithDivider(
               title: '주문내역',
               onTap: () {
-                // ⭐️ GoodsProfillBuyPage로 이동 시 userid 전달
                 Get.to(
                   () => GoodsProfillBuyPage(
-                    userId: widget.userid, // GProfill이 받은 userid를 전달
+                    userId: widget.userid,
                   ),
                 );
               },
             ),
-            const Divider(
-              height: 1,
-              thickness: 1,
-              indent: 20,
-              endIndent: 20,
-              color: Colors.grey,
+            _buildItemWithDivider(title: '알림'),
+            _buildItemWithDivider(title: '테마'),
+            _buildItemWithDivider(
+              title: '언어',
+              showDivider: false,
             ),
-            _buildSettingItem(title: '알림'),
-            const Divider(
-              height: 1,
-              thickness: 1,
-              indent: 20,
-              endIndent: 20,
-              color: Colors.grey,
-            ),
-            _buildSettingItem(title: '테마'),
-            const Divider(
-              height: 1,
-              thickness: 1,
-              indent: 20,
-              endIndent: 20,
-              color: Colors.grey,
-            ),
-            _buildSettingItem(title: '언어'),
 
-            // --- 두 번째 섹션 구분선 ---
             _buildSectionDivider(),
 
             // --- 두 번째 섹션 ---
-            _buildSettingItem(title: '회사 정보'),
-            const Divider(
-              height: 1,
-              thickness: 1,
-              indent: 20,
-              endIndent: 20,
-              color: Colors.grey,
-            ),
-            _buildSettingItem(title: '앱 정보'),
+            _buildItemWithDivider(title: '회사 정보'),
+            _buildItemWithDivider(title: '앱 정보'),
 
-            // 나머지 여백
-            const SizedBox(height: 100),
+            // ✅ 로그아웃 (마지막 → divider 없음)
+            _buildItemWithDivider(
+              title: '로그아웃',
+              showDivider: false,
+              textColor: Colors.red,
+              onTap: () {
+                Get.offAll(() => const CLogin());
+              },
+            ),
+
+            const Padding(padding: EdgeInsets.only(bottom: 100)),
           ],
         ),
       ),

@@ -67,7 +67,7 @@ class CustomerDatabase {
       set cphone = ?, cname = ?, caddress = ?
       where cseq = ?
       """,
-      [customer.cphone, customer.cname, customer.caddress]
+      [customer.cphone, customer.cname, customer.caddress, customer.cseq]
     );
     return result;
   }

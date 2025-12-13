@@ -1,22 +1,24 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 
 import 'package:xyz_project_01/model/supply_order.dart';
+import 'package:xyz_project_01/util/message.dart';
 import 'package:xyz_project_01/vm/database/supply_order_database.dart';
 
 class SMain extends StatefulWidget {
-  // ✅ 여기 sid는 "제조사 이름"으로 들어오는 걸로 통일 (SLogin에서 name 넘김)
+  // ✅ sid/sname 유지 (기능 유지)
   final String sid;
   final String sname;
+
   const SMain({super.key, required this.sid, required this.sname});
-  
+
   @override
   State<SMain> createState() => _SMainState();
 }
 
 class _SMainState extends State<SMain> {
   final SupplyOrderDatabase _orderDB = SupplyOrderDatabase();
+  final Message message = Message();
 
   bool _isLoading = true;
   bool _isApproving = false;
@@ -31,22 +33,20 @@ class _SMainState extends State<SMain> {
   }
 
   Future<void> _fetchOrders() async {
+    if (!mounted) return;
     setState(() => _isLoading = true);
+
     try {
       final list = await _orderDB.queryPendingByManufacturer(widget.sname.trim());
       if (!mounted) return;
+
       setState(() {
         _pendingOrders = list;
         _selectedOseqs.clear();
       });
     } catch (e) {
       if (!mounted) return;
-      Get.snackbar(
-        '오류',
-        '발주 목록을 불러오지 못했습니다: $e',
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
+      message.error('오류', '발주 목록을 불러오지 못했습니다: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -66,22 +66,18 @@ class _SMainState extends State<SMain> {
     if (_isApproving) return;
 
     if (_selectedOseqs.isEmpty) {
-      Get.snackbar(
-        '안내',
-        '승인할 요청을 선택해줘',
-        backgroundColor: Colors.black,
-        colorText: Colors.white,
-      );
+      message.info('안내', '승인할 요청을 선택해줘');
       return;
     }
 
     setState(() => _isApproving = true);
 
-    final String apprdate =
-        DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now());
+    final String apprdate = DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now());
 
     int success = 0;
+
     try {
+      // ✅ 선택된 발주들만 승인
       for (final oseq in _selectedOseqs) {
         final order = _pendingOrders.firstWhere((o) => o.oseq == oseq);
         final r = await _orderDB.approveOrderAndAddStock(
@@ -96,30 +92,15 @@ class _SMainState extends State<SMain> {
       if (!mounted) return;
 
       if (success > 0) {
-        Get.snackbar(
-          '완료',
-          '승인 완료됨 ($success건)',
-          backgroundColor: Colors.green,
-          colorText: Colors.white,
-        );
+        message.success('완료', '승인 완료됨 ($success건)');
       } else {
-        Get.snackbar(
-          '실패',
-          '승인 처리에 실패함',
-          backgroundColor: Colors.red,
-          colorText: Colors.white,
-        );
+        message.error('실패', '승인 처리에 실패함');
       }
 
       await _fetchOrders();
     } catch (e) {
       if (!mounted) return;
-      Get.snackbar(
-        '오류',
-        '승인 처리 중 오류: $e',
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
+      message.error('오류', '승인 처리 중 오류: $e');
     } finally {
       if (mounted) setState(() => _isApproving = false);
     }
@@ -138,52 +119,36 @@ class _SMainState extends State<SMain> {
           fit: BoxFit.contain,
         ),
         actions: [
-          IconButton(
-            onPressed: () {},
-            icon: const Icon(Icons.search),
-          ),
-          IconButton(
-            onPressed: () {},
-            icon: const Icon(Icons.notifications),
-          ),
+          IconButton(onPressed: () {}, icon: const Icon(Icons.search)),
+          IconButton(onPressed: () {}, icon: const Icon(Icons.notifications)),
         ],
       ),
       body: SafeArea(
         child: Column(
           children: [
-            // ✅ 드롭다운 제거 → 텍스트로 고정 표시(구분 불필요)
+            // 상단 칩 영역
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                     decoration: BoxDecoration(
                       color: Colors.grey.shade200,
                       borderRadius: BorderRadius.circular(30),
                     ),
-                    child: const Text(
-                      '승인요청',
-                      style: TextStyle(fontSize: 15),
-                    ),
+                    child: const Text('승인요청', style: TextStyle(fontSize: 15)),
                   ),
-
-                  // ✅ 제조사 이름 표시
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                     decoration: BoxDecoration(
                       color: Colors.grey.shade200,
                       borderRadius: BorderRadius.circular(30),
                     ),
                     child: Text(
                       widget.sname,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                     ),
                   ),
                 ],
@@ -195,26 +160,17 @@ class _SMainState extends State<SMain> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // ✅ “모든매장” 드롭다운 제거 → 텍스트로 고정
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                     decoration: BoxDecoration(
                       color: Colors.grey.shade200,
                       borderRadius: BorderRadius.circular(30),
                     ),
-                    child: const Text(
-                      '전체 요청',
-                      style: TextStyle(fontSize: 14),
-                    ),
+                    child: const Text('전체 요청', style: TextStyle(fontSize: 14)),
                   ),
-
                   Row(
                     children: [
-                      Text(
-                        '총 $totalCount건',
-                        style: const TextStyle(fontSize: 14),
-                      ),
+                      Text('총 $totalCount건', style: const TextStyle(fontSize: 14)),
                       IconButton(
                         onPressed: _isLoading ? null : _fetchOrders,
                         icon: const Icon(Icons.refresh),
@@ -239,30 +195,24 @@ class _SMainState extends State<SMain> {
                           ? const Center(
                               child: Text(
                                 "승인 요청이 없습니다.",
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: Colors.black54,
-                                ),
+                                style: TextStyle(fontSize: 16, color: Colors.black54),
                               ),
                             )
                           : ListView.builder(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 12,
-                              ),
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                               itemCount: _pendingOrders.length,
                               itemBuilder: (context, index) {
                                 final order = _pendingOrders[index];
+                                final oseq = order.oseq;
+
                                 final bool checked =
-                                    _selectedOseqs.contains(order.oseq ?? -1);
+                                    (oseq != null) && _selectedOseqs.contains(oseq);
 
                                 return Padding(
                                   padding: const EdgeInsets.only(bottom: 10.0),
                                   child: InkWell(
                                     onTap: () {
-                                      if (order.oseq != null) {
-                                        _toggleSelect(order.oseq!);
-                                      }
+                                      if (oseq != null) _toggleSelect(oseq);
                                     },
                                     borderRadius: BorderRadius.circular(12),
                                     child: Container(
@@ -271,9 +221,7 @@ class _SMainState extends State<SMain> {
                                         color: Colors.white,
                                         borderRadius: BorderRadius.circular(12),
                                         border: Border.all(
-                                          color: checked
-                                              ? Colors.black
-                                              : Colors.grey.shade300,
+                                          color: checked ? Colors.black : Colors.grey.shade300,
                                           width: checked ? 2 : 1,
                                         ),
                                       ),
@@ -286,45 +234,10 @@ class _SMainState extends State<SMain> {
                                                 : Icons.check_box_outline_blank,
                                             color: checked ? Colors.black : Colors.grey,
                                           ),
-                                          const SizedBox(width: 10),
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  order.gname,
-                                                  style: const TextStyle(
-                                                    fontSize: 15,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                                  maxLines: 1,
-                                                  overflow: TextOverflow.ellipsis,
-                                                ),
-                                                const SizedBox(height: 4),
-                                                Text(
-                                                  '옵션: ${order.gsize} / ${order.gcolor}',
-                                                  style: const TextStyle(
-                                                    fontSize: 13,
-                                                    color: Colors.black54,
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 4),
-                                                Text(
-                                                  '수량: ${order.qty}개 · 제품코드: ${order.gseq}',
-                                                  style: const TextStyle(
-                                                    fontSize: 13,
-                                                    color: Colors.black54,
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 6),
-                                                Text(
-                                                  '요청일: ${order.reqdate}',
-                                                  style: const TextStyle(
-                                                    fontSize: 12,
-                                                    color: Colors.grey,
-                                                  ),
-                                                ),
-                                              ],
+                                          Padding(
+                                            padding: const EdgeInsets.only(left: 10),
+                                            child: Expanded(
+                                              child: _OrderInfo(order: order),
                                             ),
                                           ),
                                         ],
@@ -342,9 +255,7 @@ class _SMainState extends State<SMain> {
             Padding(
               padding: const EdgeInsets.only(top: 12, bottom: 24),
               child: GestureDetector(
-                onTap: (_isApproving || _pendingOrders.isEmpty)
-                    ? null
-                    : _approveSelected,
+                onTap: (_isApproving || _pendingOrders.isEmpty) ? null : _approveSelected,
                 child: Container(
                   width: 160,
                   height: 48,
@@ -365,9 +276,7 @@ class _SMainState extends State<SMain> {
                             ),
                           )
                         : Text(
-                            _selectedOseqs.isEmpty
-                                ? "승인"
-                                : "승인 (${_selectedOseqs.length})",
+                            _selectedOseqs.isEmpty ? "승인" : "승인 (${_selectedOseqs.length})",
                             style: TextStyle(
                               fontSize: 16,
                               color: (_isApproving || _pendingOrders.isEmpty)
@@ -383,6 +292,42 @@ class _SMainState extends State<SMain> {
           ],
         ),
       ),
+    );
+  }
+}
+
+// ✅ 중복되는 카드 내부 텍스트 영역만 위젯으로 분리 (UI 동일, 코드만 정리)
+class _OrderInfo extends StatelessWidget {
+  final SupplyOrder order;
+  const _OrderInfo({required this.order});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          order.gname,
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        const Padding(padding: EdgeInsets.only(top: 4)),
+        Text(
+          '옵션: ${order.gsize} / ${order.gcolor}',
+          style: const TextStyle(fontSize: 13, color: Colors.black54),
+        ),
+        const Padding(padding: EdgeInsets.only(top: 4)),
+        Text(
+          '수량: ${order.qty}개 · 제품코드: ${order.gseq}',
+          style: const TextStyle(fontSize: 13, color: Colors.black54),
+        ),
+        const Padding(padding: EdgeInsets.only(top: 6)),
+        Text(
+          '요청일: ${order.reqdate}',
+          style: const TextStyle(fontSize: 12, color: Colors.grey),
+        ),
+      ],
     );
   }
 }

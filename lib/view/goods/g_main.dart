@@ -1,13 +1,14 @@
 // lib/goods/g_main.dart
 
-import 'package:flutter/material.dart';
-import 'package:get/get.dart';
-import 'package:xyz_project_01/view/customer/c_login.dart';
-import 'package:xyz_project_01/view/insert/goods_detail_page.dart';
-import 'package:xyz_project_01/model/goods.dart';
-import 'package:xyz_project_01/repository/goods_repository.dart';
 import 'dart:math';
 import 'dart:typed_data';
+
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+
+import 'package:xyz_project_01/model/goods.dart';
+import 'package:xyz_project_01/repository/goods_repository.dart';
+import 'package:xyz_project_01/view/insert/goods_detail_page.dart';
 
 class GMain extends StatefulWidget {
   final String userid;
@@ -17,11 +18,8 @@ class GMain extends StatefulWidget {
   State<GMain> createState() => _GMainState();
 }
 
-class _GMainState extends State<GMain>
-    with AutomaticKeepAliveClientMixin {
-  final PageController _pageController = PageController(
-    viewportFraction: 0.85,
-  );
+class _GMainState extends State<GMain> with AutomaticKeepAliveClientMixin {
+  final PageController _pageController = PageController(viewportFraction: 0.85);
   int _currentPage = 0;
 
   // 대표 상품 리스트
@@ -35,49 +33,42 @@ class _GMainState extends State<GMain>
   void initState() {
     super.initState();
     _loadGoodsData();
+    _pageController.addListener(_onPageChanged);
+  }
 
-    _pageController.addListener(() {
-      final page = _pageController.page;
-      if (page == null) return;
+  void _onPageChanged() {
+    final page = _pageController.page;
+    if (page == null) return;
 
-      int next = page.round();
-      if (_currentPage != next && mounted) {
-        setState(() {
-          _currentPage = next;
-        });
-      }
-    });
+    final next = page.round();
+    if (_currentPage != next && mounted) {
+      setState(() => _currentPage = next);
+    }
   }
 
   Future<void> _loadGoodsData() async {
-    // 1. 원본 리스트 가져오기
-    final original =
-        await GoodsRepository.getRepresentativeGoods();
+    final original = await GoodsRepository.getRepresentativeGoods();
     final totalCount = original.length;
+
+    if (!mounted) return;
 
     if (totalCount == 0) {
       setState(() => isLoading = false);
       return;
     }
 
-    // 2. 매번 섹션마다 복사본 만들어서 shuffle
     List<Goods> temp;
 
     // 오늘의 추천
-    temp = List<Goods>.from(original);
-    temp.shuffle();
-    recommendedGoods = temp
-        .take(min(4, totalCount))
-        .toList();
+    temp = List<Goods>.from(original)..shuffle();
+    recommendedGoods = temp.take(min(4, totalCount)).toList();
 
     // 인기 상품
-    temp = List<Goods>.from(original);
-    temp.shuffle();
+    temp = List<Goods>.from(original)..shuffle();
     popularGoods = temp.take(min(5, totalCount)).toList();
 
     // 최근 본 상품
-    temp = List<Goods>.from(original);
-    temp.shuffle();
+    temp = List<Goods>.from(original)..shuffle();
     recentGoods = temp.take(min(5, totalCount)).toList();
 
     setState(() => isLoading = false);
@@ -85,6 +76,7 @@ class _GMainState extends State<GMain>
 
   @override
   void dispose() {
+    _pageController.removeListener(_onPageChanged);
     _pageController.dispose();
     super.dispose();
   }
@@ -95,6 +87,7 @@ class _GMainState extends State<GMain>
   @override
   Widget build(BuildContext context) {
     super.build(context);
+
     if (isLoading) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
@@ -103,14 +96,11 @@ class _GMainState extends State<GMain>
 
     return Scaffold(
       appBar: AppBar(
-        title: GestureDetector(
-          onTap: () => Get.to(CLogin()),
-          child: Image.asset(
-            'images/xyz_logo.png',
-            height: 70,
-            width: 70,
-            fit: BoxFit.contain,
-          ),
+        title: Image.asset(
+          'images/xyz_logo.png',
+          height: 70,
+          width: 70,
+          fit: BoxFit.contain,
         ),
         actions: [
           IconButton(
@@ -127,19 +117,13 @@ class _GMainState extends State<GMain>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 오늘의 추천 타이틀
-            const Padding(
+            // 오늘의 추천
+            const _SectionTitle(
+              title: "오늘의 추천 🔥",
               padding: EdgeInsets.fromLTRB(20, 20, 0, 15),
-              child: Text(
-                "오늘의 추천 🔥",
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
             ),
 
-            // 슬라이드 카드 + 화살표 버튼
+            // 슬라이드 카드 + 화살표
             SizedBox(
               height: 320,
               child: Stack(
@@ -148,18 +132,12 @@ class _GMainState extends State<GMain>
                   PageView.builder(
                     controller: _pageController,
                     itemCount: recommendedGoods.length,
-                    itemBuilder: (context, index) {
-                      return _buildShoeCard(
-                        recommendedGoods[index],
-                      );
-                    },
+                    itemBuilder: (context, index) => _buildShoeCard(recommendedGoods[index]),
                   ),
                   Positioned(
                     right: 15,
                     child: IconButton(
-                      icon: const Icon(
-                        Icons.arrow_forward_ios,
-                      ),
+                      icon: const Icon(Icons.arrow_forward_ios),
                       iconSize: 30,
                       color: Colors.black,
                       style: IconButton.styleFrom(
@@ -176,80 +154,46 @@ class _GMainState extends State<GMain>
 
             // 인디케이터
             Padding(
-              padding: const EdgeInsets.fromLTRB(
-                20,
-                15,
-                0,
-                30,
-              ),
+              padding: const EdgeInsets.fromLTRB(20, 15, 0, 30),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.start,
                 children: List.generate(
                   recommendedGoods.length,
-                  (index) => _buildIndicator(
-                    index == _currentPage,
-                  ),
+                  (index) => _buildIndicator(index == _currentPage),
                 ),
               ),
             ),
 
-            // 인기 상품 타이틀
-            const Padding(
+            // 인기 상품
+            const _SectionTitle(
+              title: "인기 상품 🏆",
               padding: EdgeInsets.fromLTRB(20, 0, 0, 15),
-              child: Text(
-                "인기 상품 🏆",
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
             ),
 
-            // 인기 상품 가로 스크롤
             SizedBox(
               height: 220,
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 20),
                 itemCount: popularGoods.length,
-                itemBuilder: (context, index) {
-                  return _buildPopularItemCard(
-                    popularGoods[index],
-                  );
-                },
+                itemBuilder: (context, index) => _buildPopularItemCard(popularGoods[index]),
               ),
             ),
 
-            // 최근 본 상품 타이틀
-            const Padding(
+            // 최근 본 상품
+            const _SectionTitle(
+              title: "최근 본 상품 📍",
               padding: EdgeInsets.fromLTRB(20, 30, 0, 15),
-              child: Text(
-                "최근 본 상품 📍",
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
             ),
 
-            // 최근 본 상품 가로 스크롤
             Padding(
               padding: const EdgeInsets.only(bottom: 40),
               child: SizedBox(
                 height: 220,
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
                   itemCount: recentGoods.length,
-                  itemBuilder: (context, index) {
-                    return _buildPopularItemCard(
-                      recentGoods[index],
-                    );
-                  },
+                  itemBuilder: (context, index) => _buildPopularItemCard(recentGoods[index]),
                 ),
               ),
             ),
@@ -258,6 +202,10 @@ class _GMainState extends State<GMain>
       ),
     );
   }
+
+  // -----------------------
+  // Widgets
+  // -----------------------
 
   // 메인 슬라이더 카드
   Widget _buildShoeCard(Goods goods) {
@@ -289,31 +237,16 @@ class _GMainState extends State<GMain>
             // 이미지
             Expanded(
               child: ClipRRect(
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(20),
-                ),
-                child:
-                    goods.mainimage != null &&
-                        goods.mainimage is Uint8List
-                    ? Image.memory(
-                        goods.mainimage!,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                      )
-                    : const Center(
-                        child: Icon(
-                          Icons.image_not_supported,
-                          color: Colors.grey,
-                        ),
-                      ),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                child: _buildMainImage(goods.mainimage),
               ),
             ),
+
             // 텍스트 정보
             Padding(
               padding: const EdgeInsets.all(15.0),
               child: Column(
-                crossAxisAlignment:
-                    CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     goods.gcategory,
@@ -323,7 +256,7 @@ class _GMainState extends State<GMain>
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(height: 5),
+                  const Padding(padding: EdgeInsets.only(top: 5)),
                   Text(
                     goods.gname,
                     style: const TextStyle(
@@ -333,7 +266,7 @@ class _GMainState extends State<GMain>
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 5),
+                  const Padding(padding: EdgeInsets.only(top: 5)),
                   const Text(
                     "150,000원",
                     style: TextStyle(
@@ -351,6 +284,19 @@ class _GMainState extends State<GMain>
     );
   }
 
+  Widget _buildMainImage(Uint8List? bytes) {
+    if (bytes != null) {
+      return Image.memory(
+        bytes,
+        width: double.infinity,
+        fit: BoxFit.cover,
+      );
+    }
+    return const Center(
+      child: Icon(Icons.image_not_supported, color: Colors.grey),
+    );
+  }
+
   // 인기/최근 상품 카드
   Widget _buildPopularItemCard(Goods goods) {
     const double cardWidth = 150;
@@ -365,69 +311,69 @@ class _GMainState extends State<GMain>
           ),
         );
       },
-      child: Container(
+      child: SizedBox(
         width: cardWidth,
-        margin: const EdgeInsets.only(right: 15),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 이미지 박스
-            Container(
-              height: imageBoxHeight,
-              width: cardWidth,
-              decoration: BoxDecoration(
-                color: Colors.grey[200],
-                borderRadius: BorderRadius.circular(10),
+        child: Padding(
+          padding: const EdgeInsets.only(right: 15),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 이미지 박스
+              Container(
+                height: imageBoxHeight,
+                width: cardWidth,
+                decoration: BoxDecoration(
+                  color: Colors.grey[200],
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: _buildPopularImage(goods.mainimage),
+                ),
               ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child:
-                    goods.mainimage != null &&
-                        goods.mainimage is Uint8List
-                    ? Image.memory(
-                        goods.mainimage!,
-                        fit: BoxFit.cover,
-                      )
-                    : const Center(
-                        child: Icon(
-                          Icons.shopping_bag,
-                          color: Colors.grey,
-                        ),
-                      ),
+
+              const Padding(padding: EdgeInsets.only(top: 8)),
+              Text(
+                goods.gengname,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              goods.gengname,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
+              const Padding(padding: EdgeInsets.only(top: 2)),
+              Text(
+                goods.gname,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[600],
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 2),
-            Text(
-              goods.gname,
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey[600],
+              const Padding(padding: EdgeInsets.only(top: 5)),
+              const Text(
+                "150,000원",
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.blueAccent,
+                ),
               ),
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 5),
-            const Text(
-              "150,000원",
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                color: Colors.blueAccent,
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
+    );
+  }
+
+  Widget _buildPopularImage(Uint8List? bytes) {
+    if (bytes != null) {
+      return Image.memory(bytes, fit: BoxFit.cover);
+    }
+    return const Center(
+      child: Icon(Icons.shopping_bag, color: Colors.grey),
     );
   }
 
@@ -439,15 +385,13 @@ class _GMainState extends State<GMain>
       height: 8.0,
       width: isActive ? 24.0 : 8.0,
       decoration: BoxDecoration(
-        color: isActive
-            ? Colors.black
-            : Colors.grey.shade400,
+        color: isActive ? Colors.black : Colors.grey.shade400,
         borderRadius: BorderRadius.circular(4),
       ),
     );
   }
 
-  // 다음 페이지로 이동
+  // 다음 페이지 이동
   void _nextPage() {
     if (recommendedGoods.isEmpty) return;
 
@@ -463,5 +407,32 @@ class _GMainState extends State<GMain>
         curve: Curves.easeOut,
       );
     }
+  }
+}
+
+// ------------------------------
+// 공통 섹션 타이틀(가독성만)
+// ------------------------------
+class _SectionTitle extends StatelessWidget {
+  final String title;
+  final EdgeInsets padding;
+
+  const _SectionTitle({
+    required this.title,
+    required this.padding,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: padding,
+      child: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
   }
 }

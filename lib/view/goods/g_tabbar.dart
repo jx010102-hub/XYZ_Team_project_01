@@ -25,23 +25,21 @@ class _GTabbarState extends State<GTabbar> {
 
   // 탭 화면들
   List<Widget> get _pages => <Widget>[
-        GMain(userid: widget.userid),      // 0: 홈
-        GCategory(userid: widget.userid),  // 1: 카테고리
-        GBasket(userid: widget.userid),    // 2: 장바구니
-        GProfill(userid: widget.userid),   // 3: 프로필
+        GMain(userid: widget.userid), // 0: 홈
+        GCategory(userid: widget.userid), // 1: 카테고리
+        GBasket(userid: widget.userid), // 2: 장바구니
+        GProfill(userid: widget.userid), // 3: 프로필
       ];
 
   void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
+    setState(() => _selectedIndex = index);
   }
 
   // 중앙 지도 버튼 눌렀을 때
   void _onMapButtonPressed(BuildContext context) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => GMap(userid: widget.userid),
+        builder: (_) => GMap(userid: widget.userid),
       ),
     );
   }
@@ -54,7 +52,6 @@ class _GTabbarState extends State<GTabbar> {
       //   - 위: 선택한 매장 바
       body: Stack(
         children: [
-          // 현재 선택된 페이지
           _pages[_selectedIndex],
 
           // 하단 탭바 바로 위에 선택 매장 표시
@@ -82,7 +79,6 @@ class _GTabbarState extends State<GTabbar> {
         final hasStore = storeController.selectedStore.value != null;
 
         if (hasStore) {
-          // 매장 선택된 상태에서는 버튼 숨김
           return const SizedBox.shrink();
         }
 
@@ -92,13 +88,9 @@ class _GTabbarState extends State<GTabbar> {
           backgroundColor: Colors.white,
           foregroundColor: Colors.black,
           elevation: 8.0,
-          child: const Icon(
-            Icons.place,
-            size: 30,
-          ),
+          child: const Icon(Icons.place, size: 30),
         );
       }),
-
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
 
       bottomNavigationBar: BottomAppBar(
@@ -108,11 +100,12 @@ class _GTabbarState extends State<GTabbar> {
         height: 60,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: <Widget>[
+          children: [
             _buildNavItem(Icons.home_outlined, 0),
             _buildNavItem(Icons.menu, 1),
 
-            const SizedBox(width: 40), // 중앙 버튼 자리
+            // 중앙 버튼 자리 (SizedBox -> Padding)
+            const Padding(padding: EdgeInsets.only(left: 20, right: 20)),
 
             _buildNavItem(Icons.shopping_cart, 2),
             _buildNavItem(Icons.person_outline, 3),
@@ -124,7 +117,7 @@ class _GTabbarState extends State<GTabbar> {
 
   // 탭 아이콘 빌더
   Widget _buildNavItem(IconData icon, int index) {
-    bool isSelected = index == _selectedIndex;
+    final bool isSelected = index == _selectedIndex;
 
     return Expanded(
       child: IconButton(
@@ -155,7 +148,10 @@ class _GTabbarState extends State<GTabbar> {
       child: Row(
         children: [
           const Icon(Icons.store_mall_directory, color: Colors.black54),
-          const SizedBox(width: 8),
+
+          // SizedBox -> Padding
+          const Padding(padding: EdgeInsets.only(left: 8)),
+
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -168,7 +164,10 @@ class _GTabbarState extends State<GTabbar> {
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 2),
+
+                // SizedBox -> Padding
+                const Padding(padding: EdgeInsets.only(top: 2)),
+
                 Text(
                   '${store['district']} · ${store['address']}',
                   style: const TextStyle(
@@ -181,10 +180,7 @@ class _GTabbarState extends State<GTabbar> {
             ),
           ),
           TextButton(
-            onPressed: () {
-              // 다시 지도 열어서 매장 변경
-              _onMapButtonPressed(context);
-            },
+            onPressed: () => _onMapButtonPressed(context),
             child: const Text(
               '변경',
               style: TextStyle(fontSize: 14, color: Colors.black),

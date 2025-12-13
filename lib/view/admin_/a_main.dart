@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+
 import 'package:xyz_project_01/view/admin_/a_admin_add.dart';
 import 'package:xyz_project_01/view/admin_/a_request.dart';
 import 'package:xyz_project_01/view/admin_/a_return_request.dart';
@@ -13,63 +14,76 @@ class AMain extends StatefulWidget {
   State<AMain> createState() => _AMainState();
 }
 
-class _AMainState extends State<AMain> {
-  // ⭐️⭐️⭐️ 수정된 _buttons 정의: 'page' 대신 'action'에 이동 함수를 할당합니다. ⭐️⭐️⭐️
-  final List<Map<String, dynamic>> _buttons = [
-    // 'action' 필드에 Get.to()를 실행하는 함수를 직접 할당
-    {
-      'text': '상품 등록',
-      'action': () => Get.to(() => const AdminAdd()),
-    },
-    {
-      'text': '재고 현황',
-      'action': () => Get.to(() => const AStockStatus()),
-    }, // 임시 함수
-    {
-      'text': '반품 요청',
-      'action': () => Get.to(() => const AReturnRequest()),
-    }, // 임시 함수
-    {
-      'text': '결제 요청',
-      'action': () => Get.to(() => const ARequst()),
-    }, // 임시 함수
-  ];
+// 관리자 메인 메뉴 Item
+class _AdminMenuItem {
+  final String text;
+  final VoidCallback onTap;
 
+  const _AdminMenuItem({
+    required this.text,
+    required this.onTap,
+  });
+}
+
+class _AMainState extends State<AMain> {
+  late final List<_AdminMenuItem> _menus;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // 메뉴 구성
+    _menus = [
+      _AdminMenuItem(
+        text: '상품 등록',
+        onTap: () => Get.to(() => const AdminAdd()),
+      ),
+      _AdminMenuItem(
+        text: '재고 현황',
+        onTap: () => Get.to(() => const AStockStatus()),
+      ),
+      _AdminMenuItem(
+        text: '반품 요청',
+        onTap: () => Get.to(() => const AReturnRequest()),
+      ),
+      _AdminMenuItem(
+        text: '결제 요청',
+        onTap: () => Get.to(() => const ARequst()),
+      ),
+    ];
+  }
+  // ---------------- build ----------------
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        // ... (App Bar 내용 생략) ...
-        // 로고와 '강남점 직원' 텍스트
         title: Row(
           children: [
-            GestureDetector(
-              onTap: () => Get.to(CLogin()),
-              child: Image.asset(
-                'images/xyz_logo.png', // 이미지 경로 확인 필요
-                height: 40,
-                width: 40,
-                fit: BoxFit.contain,
-              ),
+            Image.asset(
+              'images/xyz_logo.png',
+              height: 40,
+              width: 40,
+              fit: BoxFit.contain,
             ),
-            const SizedBox(width: 10),
-            const Text(
-              '강남점 직원',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
+            Padding(
+              padding: const EdgeInsets.only(left: 10),
+              child: const Text(
+                '강남점 직원',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ],
         ),
         actions: [
           IconButton(
-            onPressed: () {},
-            icon: const Icon(Icons.search),
-          ),
-          IconButton(
-            onPressed: () {},
-            icon: const Icon(Icons.notifications),
+            tooltip: '로그아웃',
+            onPressed: () {
+              Get.offAll(() => const CLogin());
+            },
+            icon: const Icon(Icons.logout),
           ),
         ],
       ),
@@ -78,29 +92,23 @@ class _AMainState extends State<AMain> {
           padding: const EdgeInsets.all(25.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // 'page' 대신 'action'을 호출하도록 변경
-              ..._buttons.map((btn) {
-                return Padding(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 12.0,
+            children: _menus
+                .map(
+                  (m) => Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12.0),
+                    child: _buildAdminButton(
+                      text: m.text,
+                      onTap: m.onTap,
+                    ),
                   ),
-                  child: _buildAdminButton(
-                    text: btn['text'] as String,
-                    // 버튼의 onTap에서 'action' 필드에 할당된 함수를 호출합니다.
-                    onTap: btn['action'] as VoidCallback,
-                  ),
-                );
-              }),
-            ],
+                )
+                .toList(),
           ),
         ),
       ),
     );
-  }
+  } // build
 
-  // ... (이하 _buildAdminButton 및 _PressableAdminButton 코드는 동일) ...
-  // 버튼 위젯을 생성하고 상태 변화를 적용하기 위해 별도의 StatefulWidget으로 분리
   Widget _buildAdminButton({
     required String text,
     required VoidCallback onTap,
@@ -109,7 +117,8 @@ class _AMainState extends State<AMain> {
   }
 }
 
-// 버튼 클릭 시 색상 변화를 위한 StatefulWidget (이전 코드와 동일)
+/// 버튼 눌림 상태(색상 변화)를 위한 StatefulWidget
+/// - 기존 동작 유지: onTapDown 때 눌림 표시, onTapUp 때 해제 + 이동 실행
 class _PressableAdminButton extends StatefulWidget {
   final String text;
   final VoidCallback onTap;
@@ -120,44 +129,34 @@ class _PressableAdminButton extends StatefulWidget {
   });
 
   @override
-  State<_PressableAdminButton> createState() =>
-      _PressableAdminButtonState();
+  State<_PressableAdminButton> createState() => _PressableAdminButtonState();
 }
 
-class _PressableAdminButtonState
-    extends State<_PressableAdminButton> {
+class _PressableAdminButtonState extends State<_PressableAdminButton> {
   bool _isPressed = false;
 
+  void _setPressed(bool v) {
+    if (_isPressed == v) return;
+    setState(() => _isPressed = v);
+  }
+
+  // ---------------- build ----------------
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      // 버튼이 눌리기 시작했을 때
-      onTapDown: (_) {
-        setState(() {
-          _isPressed = true;
-        });
-      },
-      // 버튼에서 손을 떼거나 취소되었을 때
+      onTapDown: (_) => _setPressed(true),
       onTapUp: (_) {
-        setState(() {
-          _isPressed = false;
-        });
-        widget.onTap(); // 할당된 action 함수 실행
+        _setPressed(false);
+        widget.onTap();
       },
-      onTapCancel: () {
-        setState(() {
-          _isPressed = false;
-        });
-      },
+      onTapCancel: () => _setPressed(false),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         width: 350,
         height: 70,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: _isPressed
-              ? Colors.black
-              : Colors.grey[100],
+          color: _isPressed ? Colors.black : Colors.grey[100],
           borderRadius: BorderRadius.circular(15),
           boxShadow: [
             BoxShadow(
@@ -177,5 +176,5 @@ class _PressableAdminButtonState
         ),
       ),
     );
-  }
-}
+  } // build
+} // class

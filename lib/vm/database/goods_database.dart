@@ -3,26 +3,40 @@ import 'package:xyz_project_01/model/goods.dart';
 import 'package:xyz_project_01/vm/database/database_handler.dart';
 
 class GoodsDatabase {
-  final handler = DatabaseHandler();
+  final DatabaseHandler handler = DatabaseHandler();
 
-  // 전체 검색
-  Future<List<Goods>> queryGoods() async {
-    final Database db = await handler.initializeDB();
-    final List<Map<String, Object?>> queryResults =
-        await db.rawQuery('select * from goods');
-    return queryResults.map((e) => Goods.fromMap(e)).toList();
+  // ===============================
+  // 공용 유틸
+  // ===============================
+  Future<Database> _db() => handler.initializeDB();
+
+  String _placeholders(int n) => List.filled(n, '?').join(',');
+
+  Future<List<Goods>> _queryGoodsByGseqList({
+    required List<int> gseqList,
+    required String selectSql, // "SELECT ... FROM goods WHERE gseq IN (...)"
+    bool emptyReturn = true,
+  }) async {
+    if (gseqList.isEmpty) return emptyReturn ? [] : [];
+    final db = await _db();
+    final maps = await db.rawQuery(selectSql, gseqList);
+    return maps.map((e) => Goods.fromMap(e)).toList();
   }
 
-  // 빠른 검색 (대표 상품만)
+  // ===============================
+  // Read
+  // ===============================
+
+  /// 빠른 검색 (대표 상품만)
   Future<List<Goods>> queryRepresentativeGoods() async {
-    final Database db = await handler.initializeDB();
+    final db = await _db();
     final result = await db.rawQuery('''
-      select *
-      from goods
-      where gseq in (
-        select min(gseq)
-        from goods
-        group by gname
+      SELECT *
+      FROM goods
+      WHERE gseq IN (
+        SELECT MIN(gseq)
+        FROM goods
+        GROUP BY gname
       )
     ''');
     return result.map((e) => Goods.fromMap(e)).toList();
@@ -34,36 +48,94 @@ class GoodsDatabase {
     required String gsize,
     required String gcolor,
   }) async {
-    final Database db = await handler.initializeDB();
+    final db = await _db();
     final result = await db.query(
       'goods',
-      where: 'gname = ? and gsize = ? and gcolor = ?',
+      columns: ['gseq'], // ✅ 존재 여부만 보면 되니 최소 컬럼
+      where: 'gname = ? AND gsize = ? AND gcolor = ?',
       whereArgs: [gname, gsize, gcolor],
+      limit: 1,
     );
     return result.isNotEmpty;
   }
 
+  // 이름으로 해당 상품의 모든 옵션 불러오기
+  Future<List<Goods>> getGoodsByName(String gname) async {
+    final db = await _db();
+    final result = await db.query(
+      'goods',
+      where: 'gname = ?',
+      whereArgs: [gname],
+    );
+    return result.map((e) => Goods.fromMap(e)).toList();
+  }
+
+  // 이름 + 사이즈 + 색상으로 특정 한 옵션만 불러오기
+  Future<Goods?> getGoodsVariant({
+    required String gname,
+    required String gsize,
+    required String gcolor,
+  }) async {
+    final db = await _db();
+    final result = await db.query(
+      'goods',
+      where: 'gname = ? AND gsize = ? AND gcolor = ?',
+      whereArgs: [gname, gsize, gcolor],
+      limit: 1,
+    );
+    if (result.isEmpty) return null;
+    return Goods.fromMap(result.first);
+  }
+
+  /// GSEQ로 특정 상품 옵션 조회
+  Future<Goods?> getGoodsByGseq(int gseq) async {
+    final db = await _db();
+    final maps = await db.query(
+      'goods',
+      where: 'gseq = ?',
+      whereArgs: [gseq],
+      limit: 1,
+    );
+    if (maps.isEmpty) return null;
+    return Goods.fromMap(maps.first);
+  }
+  
+  /// 리스트용: mainimage만 포함(나머지 blob 제외) + 필요한 컬럼만 SELECT
+  Future<List<Goods>> getGoodsThumbByGseqList(List<int> gseqList) async {
+    if (gseqList.isEmpty) return [];
+    final sql = '''
+      SELECT 
+        gseq, gsumamount, gname, gengname, gsize, gcolor, gcategory,
+        manufacturer, price,
+        mainimage
+      FROM goods
+      WHERE gseq IN (${_placeholders(gseqList.length)})
+    ''';
+    return _queryGoodsByGseqList(gseqList: gseqList, selectSql: sql);
+  }
+
+  // ===============================
+  // Create / Update / Delete
+  // ===============================
+
   // 입력 (manufacturer, price 포함)
   Future<int> insertGoods(Goods goods) async {
-    final Database db = await handler.initializeDB();
+    final db = await _db();
 
-    final bool isExists = await existsGoods(
+    final isExists = await existsGoods(
       gname: goods.gname,
       gsize: goods.gsize,
       gcolor: goods.gcolor,
     );
+    if (isExists) return 0;
 
-    if (isExists) {
-      return 0;
-    }
-
-    final int result = await db.rawInsert(
-      """
-        insert into goods
-        (gsumamount, gname, gengname, gsize, gcolor, gcategory, manufacturer, price, mainimage, topimage, backimage, sideimage)
-        values
-        (?,?,?,?,?,?,?,?,?,?,?,?)
-      """,
+    return db.rawInsert(
+      '''
+      INSERT INTO goods
+      (gsumamount, gname, gengname, gsize, gcolor, gcategory, manufacturer, price,
+       mainimage, topimage, backimage, sideimage)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+      ''',
       [
         goods.gsumamount,
         goods.gname,
@@ -79,35 +151,30 @@ class GoodsDatabase {
         goods.sideimage,
       ],
     );
-
-    return result;
   }
 
   // 수정 (manufacturer, price 포함)
   Future<int> updateGoods(Goods goods) async {
-    if (goods.gseq == null) {
-      return 0;
-    }
+    if (goods.gseq == null) return 0;
 
-    final Database db = await handler.initializeDB();
-
-    final int result = await db.rawUpdate(
-      """
-        update goods
-        set gsumamount = ?, 
-            gname = ?, 
-            gengname = ?, 
-            gsize = ?, 
-            gcolor = ?, 
-            gcategory = ?,
-            manufacturer = ?,
-            price = ?,
-            mainimage = ?,
-            topimage = ?,
-            backimage = ?,
-            sideimage = ?
-        where gseq = ?
-      """,
+    final db = await _db();
+    return db.rawUpdate(
+      '''
+      UPDATE goods
+      SET gsumamount = ?,
+          gname = ?,
+          gengname = ?,
+          gsize = ?,
+          gcolor = ?,
+          gcategory = ?,
+          manufacturer = ?,
+          price = ?,
+          mainimage = ?,
+          topimage = ?,
+          backimage = ?,
+          sideimage = ?
+      WHERE gseq = ?
+      ''',
       [
         goods.gsumamount,
         goods.gname,
@@ -124,66 +191,34 @@ class GoodsDatabase {
         goods.gseq,
       ],
     );
-
-    return result;
   }
 
   // 삭제
   Future<void> deleteGoods(int gseq) async {
-    final Database db = await handler.initializeDB();
-    await db.rawUpdate(
-      """
-        delete from goods
-        where gseq = ?
-      """,
+    final db = await _db();
+    await db.rawDelete(
+      'DELETE FROM goods WHERE gseq = ?',
       [gseq],
     );
   }
 
-  // 이름으로 해당 상품의 모든 옵션 불러오기
-  Future<List<Goods>> getGoodsByName(String gname) async {
-    final Database db = await handler.initializeDB();
-    final result = await db.query(
-      'goods',
-      where: 'gname = ?',
-      whereArgs: [gname],
-    );
-    return result.map((e) => Goods.fromMap(e)).toList();
-  }
-
-  // 이름 + 사이즈 + 색상으로 특정 한 옵션만 불러오기
-  Future<Goods?> getGoodsVariant({
-    required String gname,
-    required String gsize,
-    required String gcolor,
-  }) async {
-    final Database db = await handler.initializeDB();
-    final result = await db.query(
-      'goods',
-      where: 'gname = ? and gsize = ? and gcolor = ?',
-      whereArgs: [gname, gsize, gcolor],
-    );
-
-    if (result.isEmpty) return null;
-    return Goods.fromMap(result.first);
-  }
-
-  // ⭐️⭐️⭐️ 1. 상품 재고(gsumamount)를 업데이트하는 함수 ⭐️⭐️⭐️
+  /// 재고(gsumamount) 업데이트
+  /// - 현재 방식: SELECT 후 UPDATE (기능 안전 / 0 clamp)
   Future<int> updateGoodsQuantity({
     required int gseq,
     required int quantityChange,
   }) async {
-    int result = 0;
-    final Database db = await handler.initializeDB();
+    final db = await _db();
 
-    final List<Map<String, Object?>> query = await db.rawQuery(
-      'select gsumamount from goods where gseq = ?',
+    int result = 0;
+    final query = await db.rawQuery(
+      'SELECT gsumamount FROM goods WHERE gseq = ?',
       [gseq],
     );
 
     if (query.isNotEmpty) {
-      int currentQty = query.first['gsumamount'] as int;
-      int newQty = currentQty + quantityChange;
+      final currentQty = query.first['gsumamount'] as int;
+      var newQty = currentQty + quantityChange;
 
       if (newQty < 0) {
         newQty = 0;
@@ -191,109 +226,10 @@ class GoodsDatabase {
       }
 
       result = await db.rawUpdate(
-        'update goods set gsumamount = ? where gseq = ?',
+        'UPDATE goods SET gsumamount = ? WHERE gseq = ?',
         [newQty, gseq],
       );
     }
     return result;
   }
-
-  // ⭐️⭐️⭐️ 2. 주문 번호(pseq)를 통해 해당 주문 상품의 Goods ID(gseq)를 조회 (시나리오 2 적용) ⭐️⭐️⭐️
-  // Purchase 테이블에 GSEQ가 직접 있다고 가정합니다.
-  Future<int?> getGoodsIdByPurchaseId(int pseq) async {
-    final db = await handler.initializeDB();
-    
-    // ⚠️⚠️ 'purchase' 테이블에 'gseq' 컬럼이 있어야 합니다.
-    final List<Map<String, dynamic>> maps = await db.query(
-      'purchase', 
-      columns: ['gseq'],
-      where: 'pseq = ?',
-      whereArgs: [pseq],
-      limit: 1, 
-    );
-    
-    if (maps.isNotEmpty) {
-      return maps.first['gseq'] as int?;
-    } else {
-      print('오류: purchase 테이블에서 pseq=$pseq의 gseq를 찾을 수 없습니다.');
-      return null; 
-    }
-  }
-
-  // ⭐️⭐️⭐️ 3. GSEQ를 사용하여 특정 상품 옵션의 모든 정보를 조회 ⭐️⭐️⭐️
-  Future<Goods?> getGoodsByGseq(int gseq) async {
-    final db = await handler.initializeDB();
-    
-    final List<Map<String, dynamic>> maps = await db.query(
-      'goods', 
-      where: 'gseq = ?',
-      whereArgs: [gseq],
-      limit: 1, 
-    );
-    
-    if (maps.isNotEmpty) {
-      return Goods.fromMap(maps.first); 
-    } else {
-      return null;
-    }
-  }
-  // 여러 gseq를 한 번에 조회 (IN 쿼리)
-
-Future<List<Goods>> getGoodsByGseqList(List<int> gseqList) async {
-  if (gseqList.isEmpty) return [];
-
-  final db = await handler.initializeDB();
-  final placeholders = List.filled(gseqList.length, '?').join(',');
-
-  final maps = await db.rawQuery(
-    'SELECT * FROM goods WHERE gseq IN ($placeholders)',
-    gseqList,
-  );
-
-  return maps.map((e) => Goods.fromMap(e)).toList();
-}
-// ✅ 리스트용: mainimage만 포함(나머지 blob 제외) + 필요한 컬럼만 SELECT
-Future<List<Goods>> getGoodsThumbByGseqList(List<int> gseqList) async {
-  if (gseqList.isEmpty) return [];
-
-  final db = await handler.initializeDB();
-  final placeholders = List.filled(gseqList.length, '?').join(',');
-
-  final maps = await db.rawQuery(
-    '''
-    SELECT 
-      gseq, gsumamount, gname, gengname, gsize, gcolor, gcategory,
-      manufacturer, price,
-      mainimage
-    FROM goods
-    WHERE gseq IN ($placeholders)
-    ''',
-    gseqList,
-  );
-
-  return maps.map((e) => Goods.fromMap(e)).toList();
-}
-
-// ✅ 더 강하게: 이미지 없이 meta만 (원하면 사용)
-Future<List<Goods>> getGoodsMetaByGseqList(List<int> gseqList) async {
-  if (gseqList.isEmpty) return [];
-
-  final db = await handler.initializeDB();
-  final placeholders = List.filled(gseqList.length, '?').join(',');
-
-  final maps = await db.rawQuery(
-    '''
-    SELECT 
-      gseq, gsumamount, gname, gengname, gsize, gcolor, gcategory,
-      manufacturer, price
-    FROM goods
-    WHERE gseq IN ($placeholders)
-    ''',
-    gseqList,
-  );
-
-  return maps.map((e) => Goods.fromMap(e)).toList();
-}
-
-
 }

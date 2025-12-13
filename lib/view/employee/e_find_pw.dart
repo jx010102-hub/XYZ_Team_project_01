@@ -8,10 +8,9 @@ class EFindPw extends StatefulWidget {
 }
 
 class _EFindPwState extends State<EFindPw> {
- //Property
-  late TextEditingController idController;
-  late TextEditingController nameController;
-  late TextEditingController phoneController;
+  late final TextEditingController idController;
+  late final TextEditingController nameController;
+  late final TextEditingController phoneController;
 
   @override
   void initState() {
@@ -19,6 +18,14 @@ class _EFindPwState extends State<EFindPw> {
     idController = TextEditingController();
     nameController = TextEditingController();
     phoneController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    idController.dispose();
+    nameController.dispose();
+    phoneController.dispose();
+    super.dispose();
   }
 
   @override
@@ -36,52 +43,59 @@ class _EFindPwState extends State<EFindPw> {
                   padding: const EdgeInsets.all(20.0),
                   child: Image.asset('images/logo.png'),
                 ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(0, 0, 0, 70),
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 70),
                   child: Text(
                     '비밀번호 찾기',
-                    style: TextStyle(
-                      fontSize: 25
+                    style: TextStyle(fontSize: 25),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: TextField(
+                    controller: idController,
+                    decoration: const InputDecoration(
+                      labelText: '이메일',
                     ),
                   ),
                 ),
-                TextField(
-                    controller: idController,
-                    decoration: InputDecoration(
-                      labelText: '이메일'
-                    ),
-                  ),
-                TextField(
-                    controller: nameController,
-                    decoration: InputDecoration(
-                      labelText: '이름'
-                    ),
-                  ),
-                TextField(
-                    controller: phoneController,
-                    decoration: InputDecoration(
-                      labelText: '전화번호'
-                    ),
-                  ),
                 Padding(
-                    padding: const EdgeInsets.fromLTRB(0, 30, 0, 30),
-                    child: ElevatedButton(
-                      onPressed: (){
-                        //
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.black,
-                        foregroundColor: Colors.white,
-                        minimumSize: Size(350, 50)
-                      ),
-                      child: Text('비밀번호 찾기')
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: TextField(
+                    controller: nameController,
+                    decoration: const InputDecoration(
+                      labelText: '이름',
                     ),
                   ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 30),
+                  child: TextField(
+                    controller: phoneController,
+                    decoration: const InputDecoration(
+                      labelText: '전화번호',
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 30),
+                  child: ElevatedButton(
+                    onPressed: () {
+                      // 기존 기능 유지(비어있음)
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.black,
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size(350, 50),
+                    ),
+                    child: const Text('비밀번호 찾기'),
+                  ),
+                ),
               ],
             ),
           ),
         ),
       ),
     );
-  } // build
-} // class
+  }
+}

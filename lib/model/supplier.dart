@@ -1,16 +1,19 @@
-class Supplier {    // 제조사
+class Supplier { // 제조사
+  int sid;       // 제조사 번호 (PK)
+  String sname;  // 제조사 이름
 
-  int sid;          // 제조사 번호 (PK)
-  String sname;     // 제조사 이름
+  Supplier({
+    required this.sid,
+    required this.sname,
+  });
 
-  Supplier(
-    {
-      required this.sid,
-      required this.sname,
-    }
-  );
+  factory Supplier.fromMap(Map<String, dynamic> res) => Supplier(
+        sid: (res['sid'] as int?) ?? 0,
+        sname: (res['sname'] as String?) ?? '',
+      );
 
-  Supplier.fromMap(Map<String, dynamic> res)
-  : sid = res['sid'],
-    sname = res['sname'];
+  Map<String, dynamic> toMap() => {
+        'sid': sid,
+        'sname': sname,
+      };
 }
