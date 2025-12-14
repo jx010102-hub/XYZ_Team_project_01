@@ -40,6 +40,7 @@ class _GProfillState extends State<GProfill> {
     required String title,
     VoidCallback? onTap,
     Color? textColor,
+    IconData? icon,
   }) {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 20),
@@ -51,8 +52,8 @@ class _GProfillState extends State<GProfill> {
           color: textColor ?? Colors.black87,
         ),
       ),
-      trailing: const Icon(
-        Icons.arrow_forward_ios,
+      trailing: Icon(
+        icon ?? Icons.arrow_forward_ios,
         size: 16,
         color: Colors.grey,
       ),
@@ -69,6 +70,7 @@ class _GProfillState extends State<GProfill> {
     VoidCallback? onTap,
     bool showDivider = true,
     Color? textColor,
+    IconData? icon,
   }) {
     return Column(
       children: [
@@ -76,6 +78,7 @@ class _GProfillState extends State<GProfill> {
           title: title,
           onTap: onTap,
           textColor: textColor,
+          icon: icon,
         ),
         if (showDivider) _buildThinDivider(),
       ],
@@ -139,13 +142,15 @@ class _GProfillState extends State<GProfill> {
 
             // --- 두 번째 섹션 ---
             _buildItemWithDivider(title: '회사 정보'),
-            _buildItemWithDivider(title: '앱 정보'),
+            _buildItemWithDivider(title: '앱 정보', showDivider: false),
 
-            // ✅ 로그아웃 (마지막 → divider 없음)
+            _buildSectionDivider(),
+            // 로그아웃
             _buildItemWithDivider(
               title: '로그아웃',
               showDivider: false,
               textColor: Colors.red,
+              icon: Icons.logout,
               onTap: () {
                 Get.offAll(() => const CLogin());
               },

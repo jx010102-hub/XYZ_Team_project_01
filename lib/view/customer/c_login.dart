@@ -50,10 +50,11 @@ class _CLoginState extends State<CLogin> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(),
       body: SingleChildScrollView(
         child: Center(
-          child: SizedBox(
-            width: 350,
+          child: Padding(
+            padding: const EdgeInsets.all(40.0),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -76,7 +77,7 @@ class _CLoginState extends State<CLogin> {
                     ),
                   ),
                 ),
-
+            
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: TextField(
@@ -87,7 +88,7 @@ class _CLoginState extends State<CLogin> {
                     ),
                   ),
                 ),
-
+            
                 Padding(
                   padding: const EdgeInsets.only(bottom: 30),
                   child: TextField(
@@ -98,7 +99,7 @@ class _CLoginState extends State<CLogin> {
                     obscureText: true,
                   ),
                 ),
-
+            
                 Padding(
                   padding: const EdgeInsets.only(bottom: 30),
                   child: ElevatedButton(
@@ -111,7 +112,7 @@ class _CLoginState extends State<CLogin> {
                     child: const Text('로그인'),
                   ),
                 ),
-
+            
                 IntrinsicHeight(
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -145,7 +146,7 @@ class _CLoginState extends State<CLogin> {
                     ],
                   ),
                 ),
-
+            
                 Padding(
                   padding: const EdgeInsets.only(top: 6),
                   child: Row(

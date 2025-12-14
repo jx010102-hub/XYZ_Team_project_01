@@ -41,47 +41,44 @@ class _SLoginState extends State<SLogin> {
       appBar: AppBar(),
       body: SingleChildScrollView(
         child: Center(
-          child: SizedBox(
-            width: 350,
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 120),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 50),
-                    child: Image.asset(
-                      'images/supplier_logo.png',
-                      scale: 8,
-                    ),
+          child: Padding(
+            padding: const EdgeInsets.all(40),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 50),
+                  child: Image.asset(
+                    'images/supplier_logo.png',
+                    scale: 8,
                   ),
-                  TextField(
-                    controller: idController,
-                    decoration: const InputDecoration(
-                      labelText: '제조사 아이디를 입력하세요',
-                    ),
+                ),
+                TextField(
+                  controller: idController,
+                  decoration: const InputDecoration(
+                    labelText: '제조사 아이디를 입력하세요',
                   ),
-                  TextField(
-                    controller: nameController,
-                    decoration: const InputDecoration(
-                      labelText: '제조사 이름을 입력하세요',
-                    ),
-                    obscureText: false,
+                ),
+                TextField(
+                  controller: nameController,
+                  decoration: const InputDecoration(
+                    labelText: '제조사 이름을 입력하세요',
                   ),
-                  Padding(
-                    padding: const EdgeInsets.only(top: 30, bottom: 60),
-                    child: ElevatedButton(
-                      onPressed: checkLogin,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.black,
-                        foregroundColor: Colors.white,
-                        minimumSize: const Size(350, 50),
-                      ),
-                      child: const Text('로그인'),
+                  obscureText: false,
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(top: 30, bottom: 60),
+                  child: ElevatedButton(
+                    onPressed: checkLogin,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.black,
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size(350, 50),
                     ),
+                    child: const Text('로그인'),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),

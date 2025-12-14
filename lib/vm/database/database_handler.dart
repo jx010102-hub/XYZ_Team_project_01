@@ -132,42 +132,18 @@ class DatabaseHandler {
             apprdate TEXT
           )
         """);
-        await db.execute(
-          "CREATE INDEX IF NOT EXISTS idx_goods_gname ON goods(gname);",
-        );
-        await db.execute(
-          "CREATE INDEX IF NOT EXISTS idx_goods_variant ON goods(gname, gsize, gcolor);",
-        );
-        await db.execute(
-          "CREATE INDEX IF NOT EXISTS idx_goods_category ON goods(gcategory);",
-        );
-        await db.execute(
-          "CREATE INDEX IF NOT EXISTS idx_purchase_userid ON purchase(userid);",
-        );
-        await db.execute(
-          "CREATE INDEX IF NOT EXISTS idx_purchase_userid_pseq ON purchase(userid, pseq DESC);",
-        );
-        await db.execute(
-          "CREATE INDEX IF NOT EXISTS idx_purchase_status_pdate ON purchase(pstatus, pdate DESC);",
-        );
-        await db.execute(
-          "CREATE INDEX IF NOT EXISTS idx_purchase_gseq ON purchase(gseq);",
-        );
-        await db.execute(
-          "CREATE INDEX IF NOT EXISTS idx_refund_rpseq ON refund(rpseq);",
-        );
-        await db.execute(
-          "CREATE INDEX IF NOT EXISTS idx_refund_rstatus ON refund(rstatus);",
-        );
-        await db.execute(
-          "CREATE INDEX IF NOT EXISTS idx_refund_rstatus_rseq ON refund(rstatus, rseq DESC);",
-        );
-        await db.execute(
-          "CREATE INDEX IF NOT EXISTS idx_supply_order_manu_status_reqdate ON supply_order(manufacturer, status, reqdate DESC);",
-        );
-        await db.execute(
-          "CREATE INDEX IF NOT EXISTS idx_supply_order_gseq ON supply_order(gseq);",
-        );
+
+        await db.execute("""
+          CREATE TABLE basket(
+            bseq INTEGER PRIMARY KEY AUTOINCREMENT,
+            userid TEXT,
+            gname TEXT,
+            gsize TEXT,
+            gcolor TEXT,
+            qty INTEGER,
+            createdAt TEXT
+          )
+        """);
       },
     );
   }

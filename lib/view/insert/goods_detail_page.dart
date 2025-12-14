@@ -4,14 +4,16 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 import 'package:xyz_project_01/model/goods.dart';
 import 'package:xyz_project_01/util/message.dart';
 import 'package:xyz_project_01/view/insert/goods_Info_Page.dart';
 import 'package:xyz_project_01/view/pay/paypage.dart';
 import 'package:xyz_project_01/vm/database/goods_database.dart';
+import 'package:xyz_project_01/vm/database/basket_database.dart';
 
 class GoodsDetailPage extends StatefulWidget {
-  final Goods goods;
+  final Goods goods; // 대표 상품(이름, 영문명, 카테고리, 기본 이미지 등)
   final String userid;
 
   const GoodsDetailPage({
@@ -38,6 +40,9 @@ class _GoodsDetailPageState extends State<GoodsDetailPage> {
   int _purchaseQuantity = 1;
 
   List<Uint8List> _displayImages = [];
+
+  // ✅ 핵심: 옵션에 맞는 실제 variant goods
+  Goods? _selectedVariant;
 
   @override
   void initState() {
@@ -84,10 +89,11 @@ class _GoodsDetailPageState extends State<GoodsDetailPage> {
         _isLoadingOptions = false;
       });
 
+      // ✅ 기본 옵션으로 variant 확정
+      await _syncSelectedVariant();
+
       debugPrint("✅ [Detail] ${widget.goods.gname} 옵션 로드 완료");
-      debugPrint(
-        "✅ [Detail] size=${_availableSizes.length}, color=${_availableColorMap.length}",
-      );
+      debugPrint("✅ [Detail] size=${_availableSizes.length}, color=${_availableColorMap.length}");
     } catch (e) {
       debugPrint('❌ [Detail] 옵션 로드 에러: $e');
       if (!mounted) return;
@@ -103,15 +109,12 @@ class _GoodsDetailPageState extends State<GoodsDetailPage> {
       goods.backimage,
       goods.sideimage,
     ];
-
-    // null 제거 + 중복 제거
     return raw.whereType<Uint8List>().toSet().toList();
   }
 
   void _setDefaultOptionIfNeeded() {
     _selectedSize ??= _availableSizes.isNotEmpty ? _availableSizes.first : null;
-    _selectedColor ??=
-        _availableColorMap.isNotEmpty ? _availableColorMap.keys.first : null;
+    _selectedColor ??= _availableColorMap.isNotEmpty ? _availableColorMap.keys.first : null;
   }
 
   int _getTempColorHex(String colorName) {
@@ -126,6 +129,35 @@ class _GoodsDetailPageState extends State<GoodsDetailPage> {
         return 0xFF3F51B5;
       default:
         return 0xFF808080;
+    }
+  }
+
+  // ✅ 옵션(사이즈/색상) 선택이 바뀔 때마다 variant를 DB에서 확정
+  Future<void> _syncSelectedVariant() async {
+    if (_selectedSize == null || _selectedColor == null) return;
+
+    try {
+      final goodsDB = GoodsDatabase();
+      final v = await goodsDB.getGoodsVariant(
+        gname: widget.goods.gname,
+        gsize: _selectedSize!,
+        gcolor: _selectedColor!,
+      );
+
+      if (!mounted) return;
+      setState(() {
+        _selectedVariant = v;
+      });
+
+      if (v == null) {
+        debugPrint('❌ [Detail] variant 없음: ${widget.goods.gname} / $_selectedSize / $_selectedColor');
+      } else {
+        debugPrint('✅ [Detail] variant 확정 gseq=${v.gseq}');
+      }
+    } catch (e) {
+      debugPrint('❌ [Detail] variant 조회 에러: $e');
+      // UI는 유지, 메시지만
+      message.error('오류', '선택 옵션 상품을 찾지 못했습니다.');
     }
   }
 
@@ -168,7 +200,6 @@ class _GoodsDetailPageState extends State<GoodsDetailPage> {
             _buildProductImageSection(),
             _buildPriceAndNameSection(),
 
-            // ✅ 기존 SizedBox(바닥 여백) 대신 Padding 유지 (UI 동일)
             const Padding(padding: EdgeInsets.only(bottom: 100)),
           ],
         ),
@@ -210,7 +241,6 @@ class _GoodsDetailPageState extends State<GoodsDetailPage> {
             },
           ),
 
-          // 좋아요 + 제품상세 버튼
           Positioned(
             bottom: 20,
             right: 20,
@@ -251,7 +281,6 @@ class _GoodsDetailPageState extends State<GoodsDetailPage> {
             ),
           ),
 
-          // 페이지 인디케이터
           Positioned(
             bottom: 70,
             child: Row(
@@ -267,6 +296,9 @@ class _GoodsDetailPageState extends State<GoodsDetailPage> {
   }
 
   Widget _buildPriceAndNameSection() {
+    // ✅ 가격 표시도 가능하면 variant 기준으로 보여주기(없으면 대표 goods)
+    final shownPrice = _selectedVariant?.price ?? widget.goods.price;
+
     return Padding(
       padding: const EdgeInsets.all(20.0),
       child: Column(
@@ -280,9 +312,9 @@ class _GoodsDetailPageState extends State<GoodsDetailPage> {
             ],
           ),
           const Padding(padding: EdgeInsets.only(top: 15)),
-          const Text(
-            "150,000원",
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          Text(
+            '${NumberFormat('#,###').format(shownPrice.round())}원',
+            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
           ),
           const Padding(padding: EdgeInsets.only(top: 10)),
           Text(
@@ -391,8 +423,7 @@ class _GoodsDetailPageState extends State<GoodsDetailPage> {
         return StatefulBuilder(
           builder: (context, setModalState) {
             final bottomPadding = MediaQuery.of(context).viewInsets.bottom;
-            final sheetHeight =
-                MediaQuery.of(context).size.height * 0.75 + bottomPadding;
+            final sheetHeight = MediaQuery.of(context).size.height * 0.75 + bottomPadding;
 
             return Container(
               height: sheetHeight,
@@ -424,7 +455,7 @@ class _GoodsDetailPageState extends State<GoodsDetailPage> {
                   const Text('사이즈', style: TextStyle(fontWeight: FontWeight.bold)),
                   const Padding(padding: EdgeInsets.only(top: 10)),
                   SizedBox(
-                    height: 80, // ✅ 스크롤 높이 고정이라 SizedBox 유지(필요한 케이스)
+                    height: 80,
                     child: SingleChildScrollView(
                       child: _buildSizeOptions(setModalState),
                     ),
@@ -490,7 +521,10 @@ class _GoodsDetailPageState extends State<GoodsDetailPage> {
         final isSelected = _selectedSize == size;
 
         return GestureDetector(
-          onTap: () => setModalState(() => _selectedSize = size),
+          onTap: () async {
+            setModalState(() => _selectedSize = size);
+            await _syncSelectedVariant();
+          },
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
             decoration: BoxDecoration(
@@ -521,13 +555,15 @@ class _GoodsDetailPageState extends State<GoodsDetailPage> {
         final colorValue = Color(entry.value);
         final isSelected = _selectedColor == colorName;
 
-        final checkColor =
-            colorValue.computeLuminance() > 0.5 ? Colors.black : Colors.white;
+        final checkColor = colorValue.computeLuminance() > 0.5 ? Colors.black : Colors.white;
 
         return Column(
           children: [
             GestureDetector(
-              onTap: () => setModalState(() => _selectedColor = colorName),
+              onTap: () async {
+                setModalState(() => _selectedColor = colorName);
+                await _syncSelectedVariant();
+              },
               child: Container(
                 width: 40,
                 height: 40,
@@ -610,18 +646,45 @@ class _GoodsDetailPageState extends State<GoodsDetailPage> {
       children: [
         Expanded(
           child: ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               if (_selectedSize == null || _selectedColor == null) {
                 message.warning('옵션 선택', '사이즈와 색상을 모두 선택해 주세요.');
                 return;
               }
 
-              Navigator.pop(context);
+              // ✅ variant 없으면 막기
+              if (_selectedVariant == null) {
+                message.error('오류', '선택한 옵션의 상품을 찾을 수 없습니다.');
+                return;
+              }
 
-              message.success(
-                '장바구니',
-                '${widget.goods.gname} ($_selectedSize/$_selectedColor) $_purchaseQuantity개가 장바구니에 담겼습니다.',
-              );
+              final basketDB = BasketDatabase();
+
+              try {
+                final r = await basketDB.upsertBasket(
+                  userid: widget.userid,
+                  gname: widget.goods.gname,
+                  gsize: _selectedSize!,
+                  gcolor: _selectedColor!,
+                  qty: _purchaseQuantity,
+                );
+
+                if (!mounted) return;
+
+                Navigator.pop(context);
+
+                if (r > 0) {
+                  message.success(
+                    '장바구니',
+                    '${widget.goods.gname} ($_selectedSize/$_selectedColor) $_purchaseQuantity개 담김',
+                  );
+                } else {
+                  message.error('실패', '장바구니 담기에 실패함');
+                }
+              } catch (e) {
+                if (!mounted) return;
+                message.error('오류', '장바구니 처리 중 오류: $e');
+              }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.grey.shade700,
@@ -637,19 +700,26 @@ class _GoodsDetailPageState extends State<GoodsDetailPage> {
         const Padding(padding: EdgeInsets.only(left: 10)),
         Expanded(
           child: ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               if (_selectedSize == null || _selectedColor == null) {
                 message.warning('옵션 선택', '사이즈와 색상을 모두 선택해 주세요.');
                 return;
               }
 
+              // ✅ variant 없으면 막기
+              if (_selectedVariant == null) {
+                message.error('오류', '선택한 옵션의 상품을 찾을 수 없습니다.');
+                return;
+              }
+
               Navigator.pop(context);
 
+              // ✅ PayPage에는 대표 goods가 아니라 variant 전달
               Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (_) => PayPage(
-                    goods: widget.goods,
+                    goods: _selectedVariant!, // <- 여기 핵심
                     selectedSize: _selectedSize!,
                     selectedColor: _selectedColor!,
                     quantity: _purchaseQuantity,

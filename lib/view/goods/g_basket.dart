@@ -1,29 +1,21 @@
+// lib/view/basket/g_basket.dart
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 
 import 'package:xyz_project_01/controller/store_controller.dart';
+import 'package:xyz_project_01/model/goods.dart';
+import 'package:xyz_project_01/model/basket.dart';
+import 'package:xyz_project_01/model/basket_detail.dart';
+import 'package:xyz_project_01/util/message.dart';
 
-// 장바구니 항목 데이터 구조
-class BasketItem {
-  final int id;
-  final String name;
-  final String engName;
-  final String imagePath;
-  final double price; // 상품 개별 가격
-  int quantity; // 수량 (수정 가능)
-  bool isChecked; // 선택 상태
+import 'package:xyz_project_01/vm/database/basket_database.dart';
+import 'package:xyz_project_01/vm/database/goods_database.dart';
 
-  BasketItem({
-    required this.id,
-    required this.name,
-    required this.engName,
-    required this.imagePath,
-    required this.price,
-    this.quantity = 1,
-    this.isChecked = true,
-  });
-}
+import 'package:xyz_project_01/view/pay/paypage.dart';
+import 'package:xyz_project_01/view/pay/paypage_multi.dart';
 
 class GBasket extends StatefulWidget {
   final String userid;
@@ -35,145 +27,350 @@ class GBasket extends StatefulWidget {
 
 class _GBasketState extends State<GBasket> {
   final StoreController storeController = Get.find<StoreController>();
+  final Message msg = Message();
 
-  // 장바구니 목록
-  final List<BasketItem> _items = [];
+  final BasketDatabase _basketDB = BasketDatabase();
+  final GoodsDatabase _goodsDB = GoodsDatabase();
 
-  // 총 금액/수량
+  final NumberFormat _currencyFormatter = NumberFormat('#,###');
+
+  bool _isLoading = true;
+
+  List<BasketDetail> _details = [];
+  final Set<int> _checkedBseqs = {};
+
   double _totalPrice = 0;
   int _totalQuantity = 0;
+
+  String _formatCurrency(num amount) => '${_currencyFormatter.format(amount.round())}원';
 
   @override
   void initState() {
     super.initState();
-
-    // 초기 더미 데이터
-    _items.addAll([
-      BasketItem(
-        id: 1,
-        name: '나이키 매직포스 파워레인저 화이트',
-        engName: 'Nike Magic Force Power Rangers White',
-        imagePath: 'images/shoe1.png',
-        price: 100000,
-        quantity: 1,
-        isChecked: true,
-      ),
-      BasketItem(
-        id: 2,
-        name: '아디다스 퓨처러너 블랙',
-        engName: 'Adidas Future Runner Black',
-        imagePath: 'images/shoe2.png',
-        price: 109200,
-        quantity: 2,
-        isChecked: true,
-      ),
-    ]);
-
-    _recalcTotals();
+    _loadBasket();
   }
 
-  // 총액/수량 계산 (setState 밖에서 값만 계산)
-  void _recalcTotals() {
-    double newTotal = 0;
-    int newQuantity = 0;
+  Future<void> _loadBasket() async {
+    if (!mounted) return;
+    setState(() => _isLoading = true);
 
-    for (final item in _items) {
-      if (item.isChecked) {
-        newTotal += item.price * item.quantity;
-        newQuantity += item.quantity;
+    try {
+      final list = await _basketDB.queryBasketByUser(widget.userid);
+
+      final joined = <BasketDetail>[];
+      for (final b in list) {
+        final variant = await _goodsDB.getGoodsVariant(
+          gname: b.gname,
+          gsize: b.gsize,
+          gcolor: b.gcolor,
+        );
+        joined.add(BasketDetail(basket: b, goods: variant));
       }
+
+      if (!mounted) return;
+
+      setState(() {
+        _details = joined;
+        _isLoading = false;
+
+        final exist = joined.map((e) => e.basket.bseq).whereType<int>().toSet();
+        _checkedBseqs.removeWhere((bseq) => !exist.contains(bseq));
+
+        if (_checkedBseqs.isEmpty) {
+          _checkedBseqs.addAll(exist);
+        }
+
+        _recalcTotals();
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      msg.error('오류', '장바구니 로드 실패: $e');
+    }
+  }
+
+  void _recalcTotals() {
+    double total = 0;
+    int qty = 0;
+
+    for (final d in _details) {
+      final bseq = d.basket.bseq;
+      if (bseq == null) continue;
+      if (!_checkedBseqs.contains(bseq)) continue;
+
+      final price = d.goods?.price ?? 0;
+      total += price * d.basket.qty;
+      qty += d.basket.qty;
     }
 
-    _totalPrice = newTotal;
-    _totalQuantity = newQuantity;
+    _totalPrice = total;
+    _totalQuantity = qty;
   }
 
-  void _applyTotals() {
+  int _findIndexByBseq(int bseq) {
+    return _details.indexWhere((e) => e.basket.bseq == bseq);
+  }
+
+  Future<void> _updateQty(BasketDetail d, int change) async {
+    final bseq = d.basket.bseq;
+    if (bseq == null) return;
+
+    final newQty = d.basket.qty + change;
+    if (newQty < 1) return;
+
+    try {
+      final r = await _basketDB.updateBasketQty(bseq, newQty);
+      if (r > 0) {
+        if (!mounted) return;
+
+        setState(() {
+          final idx = _findIndexByBseq(bseq);
+          if (idx != -1) {
+            final old = _details[idx];
+
+            final newBasket = Basket(
+              bseq: old.basket.bseq,
+              userid: old.basket.userid,
+              gname: old.basket.gname,
+              gsize: old.basket.gsize,
+              gcolor: old.basket.gcolor,
+              qty: newQty,
+              createdAt: old.basket.createdAt,
+            );
+
+            _details[idx] = old.copyWith(basket: newBasket);
+          }
+
+          _recalcTotals();
+        });
+      }
+    } catch (e) {
+      msg.error('오류', '수량 변경 실패: $e');
+    }
+  }
+
+  Future<void> _deleteItem(BasketDetail d) async {
+    final bseq = d.basket.bseq;
+    if (bseq == null) return;
+
+    try {
+      final r = await _basketDB.deleteBasket(bseq);
+      if (r > 0) {
+        msg.success('삭제', '장바구니 항목 삭제됨');
+        await _loadBasket();
+      } else {
+        msg.error('실패', '삭제 실패');
+      }
+    } catch (e) {
+      msg.error('오류', '삭제 중 오류: $e');
+    }
+  }
+
+  void _toggleCheck(int bseq) {
     setState(() {
+      if (_checkedBseqs.contains(bseq)) {
+        _checkedBseqs.remove(bseq);
+      } else {
+        _checkedBseqs.add(bseq);
+      }
       _recalcTotals();
     });
   }
 
-  // 수량 업데이트
-  void _updateQuantity(BasketItem item, int change) {
-    setState(() {
-      final newQuantity = item.quantity + change;
-      if (newQuantity >= 1) {
-        item.quantity = newQuantity;
-        _recalcTotals();
-      }
-    });
-  }
+  // 옵션변경
+  void _openOptionSheet(BasketDetail d) async {
+    final bseq = d.basket.bseq;
+    if (bseq == null) return;
 
-  // 금액 포맷
-  String _formatCurrency(double amount) {
-    final formatter = NumberFormat('#,###');
-    return '${formatter.format(amount.round())}원';
-  }
+    final gname = d.basket.gname;
 
-  // 아직 구현 안 된 기능 다이얼로그
-  void _showNotImplementedDialog(BuildContext context, String action) {
-    showDialog(
+    List<Goods> options = [];
+    try {
+      options = await _goodsDB.getGoodsByName(gname);
+    } catch (e) {
+      msg.error('오류', '옵션 로드 실패: $e');
+      return;
+    }
+
+    final sizes = options.map((e) => e.gsize).toSet().toList()..sort();
+    final colors = options.map((e) => e.gcolor).toSet().toList()..sort();
+
+    String tempSize = d.basket.gsize;
+    String tempColor = d.basket.gcolor;
+
+    showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
       builder: (_) {
-        return AlertDialog(
-          title: Text(action),
-          content: const Text('현재 해당 기능은 구현 중입니다. 🚧'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('확인'),
-            ),
-          ],
+        return StatefulBuilder(
+          builder: (context, sheetSet) {
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 16,
+                right: 16,
+                top: 16,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('옵션 변경', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 12),
+                  Text(gname, maxLines: 1, overflow: TextOverflow.ellipsis),
+                  const SizedBox(height: 14),
+
+                  const Text('사이즈', style: TextStyle(color: Colors.grey)),
+                  DropdownButton<String>(
+                    value: tempSize,
+                    isExpanded: true,
+                    items: sizes.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+                    onChanged: (v) {
+                      if (v == null) return;
+                      sheetSet(() => tempSize = v);
+                    },
+                  ),
+
+                  const SizedBox(height: 10),
+                  const Text('색상', style: TextStyle(color: Colors.grey)),
+                  DropdownButton<String>(
+                    value: tempColor,
+                    isExpanded: true,
+                    items: colors.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                    onChanged: (v) {
+                      if (v == null) return;
+                      sheetSet(() => tempColor = v);
+                    },
+                  ),
+
+                  const SizedBox(height: 14),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.black,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      onPressed: () async {
+                        try {
+                          final r = await _basketDB.updateBasketOption(
+                            bseq: bseq,
+                            gsize: tempSize,
+                            gcolor: tempColor,
+                          );
+
+                          if (!mounted) return;
+
+                          if (r > 0) {
+                            Navigator.pop(context);
+                            msg.success('완료', '옵션 변경 완료됨');
+                            await _loadBasket();
+                          } else {
+                            msg.error('실패', '옵션 변경 실패');
+                          }
+                        } catch (e) {
+                          msg.error('오류', '옵션 변경 오류: $e');
+                        }
+                      },
+                      child: const Text('적용'),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
         );
       },
     );
   }
 
-  // 장바구니 카드 1개
-  Widget _buildBasketItem(BasketItem item) {
-    final itemTotalPrice = item.price * item.quantity;
+  // 바로주문(1개)
+  void _goPaySingle(BasketDetail d) {
+    final goods = d.goods;
+    if (goods == null) {
+      msg.error('오류', '상품 옵션을 찾을 수 없음');
+      return;
+    }
+
+    Get.to(() => PayPage(
+          goods: goods,
+          selectedSize: d.basket.gsize,
+          selectedColor: d.basket.gcolor,
+          quantity: d.basket.qty,
+          userid: widget.userid,
+        ));
+  }
+
+  // 체크된 여러개 결제
+  void _goPaySelected() {
+    final selected = _details.where((d) {
+      final bseq = d.basket.bseq;
+      return bseq != null && _checkedBseqs.contains(bseq);
+    }).toList();
+
+    if (selected.isEmpty) {
+      msg.info('안내', '구매할 상품을 체크해야 함');
+      return;
+    }
+
+    Get.to(() => PayPageMulti(
+          userid: widget.userid,
+          items: selected,
+        ));
+  }
+
+  Widget _thumb(Uint8List? bytes) {
+    return Container(
+      width: 60,
+      height: 60,
+      decoration: BoxDecoration(
+        color: Colors.grey.shade200,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: bytes != null
+          ? ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.memory(bytes, fit: BoxFit.cover),
+            )
+          : const Icon(Icons.image, color: Colors.grey),
+    );
+  }
+
+  Widget _buildItem(BasketDetail d) {
+    final b = d.basket;
+    final bseq = b.bseq ?? -1;
+    final checked = _checkedBseqs.contains(bseq);
+
+    final goods = d.goods;
+    final price = goods?.price ?? 0;
+    final sum = price * b.qty;
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 15.0),
+      padding: const EdgeInsets.only(bottom: 15),
       child: Card(
         elevation: 3,
         margin: const EdgeInsets.symmetric(horizontal: 10),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         child: Padding(
-          padding: const EdgeInsets.all(15.0),
+          padding: const EdgeInsets.all(15),
           child: Column(
             children: [
-              // 1) 체크박스 / 상품 정보 / 삭제
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        item.isChecked = !item.isChecked;
-                        _recalcTotals();
-                      });
-                    },
+                    onTap: () => _toggleCheck(bseq),
                     child: Icon(
-                      item.isChecked ? Icons.check_box : Icons.check_box_outline_blank,
-                      color: item.isChecked ? Colors.black : Colors.grey,
+                      checked ? Icons.check_box : Icons.check_box_outline_blank,
+                      color: checked ? Colors.black : Colors.grey,
                     ),
                   ),
-
-                  Padding(
-                    padding: const EdgeInsets.only(left: 10),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.asset(
-                        item.imagePath,
-                        width: 60,
-                        height: 60,
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                  ),
-
+                  const SizedBox(width: 10),
+                  _thumb(goods?.mainimage),
                   Expanded(
                     child: Padding(
                       padding: const EdgeInsets.only(left: 15),
@@ -181,30 +378,28 @@ class _GBasketState extends State<GBasket> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            item.name,
+                            goods?.gname ?? b.gname,
                             style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
+                          Text(goods?.gengname ?? '', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                          const SizedBox(height: 6),
                           Text(
-                            item.engName,
-                            style: const TextStyle(fontSize: 12, color: Colors.grey),
+                            '옵션: ${b.gsize} / ${b.gcolor}',
+                            style: const TextStyle(fontSize: 12, color: Colors.black54),
                           ),
                         ],
                       ),
                     ),
                   ),
-
                   GestureDetector(
-                    onTap: () => _showNotImplementedDialog(context, '항목 삭제'),
+                    onTap: () => _deleteItem(d),
                     child: const Icon(Icons.close, color: Colors.grey, size: 20),
                   ),
                 ],
               ),
-
               const Divider(height: 30, thickness: 1, color: Colors.black12),
-
-              // 2) 수량 조절 / 총 상품 금액
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -218,45 +413,40 @@ class _GBasketState extends State<GBasket> {
                       children: [
                         IconButton(
                           icon: const Icon(Icons.remove, size: 20),
-                          onPressed: () => _updateQuantity(item, -1),
-                          color: item.quantity > 1 ? Colors.black : Colors.grey,
+                          onPressed: b.qty > 1 ? () => _updateQty(d, -1) : null,
+                          color: b.qty > 1 ? Colors.black : Colors.grey,
                         ),
                         Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 5.0),
-                          child: Text('${item.quantity}', style: const TextStyle(fontSize: 16)),
+                          padding: const EdgeInsets.symmetric(horizontal: 5),
+                          child: Text('${b.qty}', style: const TextStyle(fontSize: 16)),
                         ),
                         IconButton(
                           icon: const Icon(Icons.add, size: 20),
-                          onPressed: () => _updateQuantity(item, 1),
+                          onPressed: () => _updateQty(d, 1),
                         ),
                       ],
                     ),
                   ),
-
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       const Text('총 상품 금액', style: TextStyle(fontSize: 14, color: Colors.grey)),
-                      Padding(
-                        padding: const EdgeInsets.only(top: 5),
-                        child: Text(
-                          _formatCurrency(itemTotalPrice),
-                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                        ),
+                      const SizedBox(height: 5),
+                      Text(
+                        _formatCurrency(sum),
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                       ),
                     ],
                   ),
                 ],
               ),
-
-              // 3) 옵션 변경 / 바로 주문
               Padding(
                 padding: const EdgeInsets.only(top: 15),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     ElevatedButton(
-                      onPressed: () => _showNotImplementedDialog(context, '옵션 변경'),
+                      onPressed: () => _openOptionSheet(d),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.grey.shade700,
                         foregroundColor: Colors.white,
@@ -264,17 +454,15 @@ class _GBasketState extends State<GBasket> {
                       ),
                       child: const Text('옵션변경'),
                     ),
-                    Padding(
-                      padding: const EdgeInsets.only(left: 10),
-                      child: ElevatedButton(
-                        onPressed: () => _showNotImplementedDialog(context, '바로 주문'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFE53935),
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                        ),
-                        child: const Text('바로주문'),
+                    const SizedBox(width: 10),
+                    ElevatedButton(
+                      onPressed: () => _goPaySingle(d),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFE53935),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
                       ),
+                      child: const Text('바로주문'),
                     ),
                   ],
                 ),
@@ -290,33 +478,29 @@ class _GBasketState extends State<GBasket> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Image.asset(
-          'images/xyz_logo.png',
-          height: 70,
-          width: 70,
-          fit: BoxFit.contain,
-        ),
+        title: Image.asset('images/xyz_logo.png', height: 70, width: 70, fit: BoxFit.contain),
         actions: [
           IconButton(onPressed: () {}, icon: const Icon(Icons.search)),
           IconButton(onPressed: () {}, icon: const Icon(Icons.notifications)),
         ],
       ),
-
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            ..._items.map(_buildBasketItem),
-
-            // bottomSheet 영역과 겹침 방지용 패딩
-            const Padding(
-              padding: EdgeInsets.only(bottom: 100),
-            ),
-          ],
-        ),
-      ),
-
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _details.isEmpty
+              ? const Center(child: Text('장바구니가 비어있습니다.'))
+              : SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      ..._details.map(_buildItem),
+                      const Padding(padding: EdgeInsets.only(bottom: 110)),
+                    ],
+                  ),
+                ),
       bottomSheet: Obx(() {
         final store = storeController.selectedStore.value;
+
+        // totals 최신화
+        _recalcTotals();
 
         return Container(
           decoration: BoxDecoration(
@@ -332,13 +516,8 @@ class _GBasketState extends State<GBasket> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // 구매하기 영역
               GestureDetector(
-                onTap: () {
-                  // totals 최신 반영 보장
-                  _applyTotals();
-                  _showNotImplementedDialog(context, '총 $_totalQuantity개 상품 구매하기');
-                },
+                onTap: _goPaySelected,
                 child: Container(
                   height: 60,
                   width: double.infinity,
@@ -355,8 +534,6 @@ class _GBasketState extends State<GBasket> {
                   ),
                 ),
               ),
-
-              // 선택 매장 정보 (있을 때만)
               if (store != null)
                 Container(
                   width: double.infinity,
@@ -372,37 +549,28 @@ class _GBasketState extends State<GBasket> {
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       const Icon(Icons.store, color: Colors.black87, size: 20),
-                      const Padding(padding: EdgeInsets.only(left: 10)),
+                      const SizedBox(width: 10),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               store['name'] as String,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black87,
-                              ),
+                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
                               overflow: TextOverflow.ellipsis,
                             ),
-                            Padding(
-                              padding: const EdgeInsets.only(top: 3),
-                              child: Text(
-                                '${store['district']} · ${store['address']}',
-                                style: const TextStyle(fontSize: 11, color: Colors.grey),
-                                overflow: TextOverflow.ellipsis,
-                              ),
+                            const SizedBox(height: 3),
+                            Text(
+                              '${store['district']} · ${store['address']}',
+                              style: const TextStyle(fontSize: 11, color: Colors.grey),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ],
                         ),
                       ),
                       TextButton(
-                        onPressed: () => _showNotImplementedDialog(context, '매장 변경하기'),
-                        child: const Text(
-                          '변경',
-                          style: TextStyle(color: Colors.blue, fontSize: 12),
-                        ),
+                        onPressed: () => msg.info('안내', '매장 변경은 기존 흐름대로 GMap 연결하면 됨'),
+                        child: const Text('변경', style: TextStyle(color: Colors.blue, fontSize: 12)),
                       ),
                     ],
                   ),

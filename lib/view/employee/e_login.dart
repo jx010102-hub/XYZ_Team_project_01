@@ -47,10 +47,11 @@ class _ELoginState extends State<ELogin> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(),
       body: SingleChildScrollView(
         child: Center(
-          child: SizedBox(
-            width: 350,
+          child: Padding(
+            padding: const EdgeInsets.all(40.0),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -58,7 +59,7 @@ class _ELoginState extends State<ELogin> {
                   padding: const EdgeInsets.only(bottom: 50),
                   child: Image.asset('images/admin_logo.png'),
                 ),
-
+            
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: TextField(
@@ -69,7 +70,7 @@ class _ELoginState extends State<ELogin> {
                     ),
                   ),
                 ),
-
+            
                 Padding(
                   padding: const EdgeInsets.only(bottom: 30),
                   child: TextField(
@@ -80,7 +81,7 @@ class _ELoginState extends State<ELogin> {
                     obscureText: true,
                   ),
                 ),
-
+            
                 Padding(
                   padding: const EdgeInsets.only(bottom: 30),
                   child: ElevatedButton(
@@ -93,7 +94,7 @@ class _ELoginState extends State<ELogin> {
                     child: const Text('로그인'),
                   ),
                 ),
-
+            
                 IntrinsicHeight(
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,

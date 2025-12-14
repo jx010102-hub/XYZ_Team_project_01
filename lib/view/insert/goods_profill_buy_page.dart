@@ -12,6 +12,9 @@ import 'package:xyz_project_01/vm/database/purchase_database.dart';
 import 'package:xyz_project_01/vm/database/refund_database.dart';
 import 'package:xyz_project_01/vm/database/goods_database.dart';
 
+// ✅ 반품요청 페이지 import
+import 'package:xyz_project_01/view/insert/refund_request_page.dart';
+
 // ===============================
 // UI용 상세 모델
 // ===============================
@@ -29,6 +32,33 @@ class RefundDetail {
 }
 
 enum OrderView { purchase, refund }
+
+// ===============================
+// ✅ ListView용 Row 모델
+// ===============================
+enum _RowType { header, order, refund }
+
+class _ListRow {
+  final _RowType type;
+  final String? header;
+  final OrderDetail? order;
+  final RefundDetail? refund;
+
+  const _ListRow.header(this.header)
+      : type = _RowType.header,
+        order = null,
+        refund = null;
+
+  const _ListRow.order(this.order)
+      : type = _RowType.order,
+        header = null,
+        refund = null;
+
+  const _ListRow.refund(this.refund)
+      : type = _RowType.refund,
+        header = null,
+        order = null;
+}
 
 class GoodsProfillBuyPage extends StatefulWidget {
   final String userId;
@@ -138,7 +168,6 @@ class _GoodsProfillBuyPageState extends State<GoodsProfillBuyPage> {
   }
 
   Future<void> _loadUserPurchases() async {
-    // ✅ 반품요청된 주문은 제외하고 가져오기
     final purchases = await _purchaseDB.queryPurchasesForUserExcludeRefunded(_currentUserId);
 
     final gseqSet = purchases.where((p) => p.gseq != null).map((p) => p.gseq!).toSet();
@@ -175,6 +204,34 @@ class _GoodsProfillBuyPageState extends State<GoodsProfillBuyPage> {
   }
 
   // ===============================
+  // ✅ 반품 요청 페이지 열기
+  // ===============================
+  Future<void> _goRefundRequestPage(OrderDetail detail) async {
+    final p = detail.purchase;
+    if (p.pseq == null || p.pstatus != 4) {
+      _info('알림', '수령 완료된 주문만 반품 요청이 가능합니다.');
+      return;
+    }
+
+    final goodsName = detail.goods?.gname ?? '(상품 정보 없음)';
+    final optionText = _optionText(p);
+
+    final result = await Get.to<bool>(() => RefundRequestPage(
+          pseq: p.pseq!,
+          goodsName: goodsName,
+          optionText: optionText,
+        ));
+
+    if (!mounted) return;
+
+    if (result == true) {
+      setState(() => _currentView = OrderView.refund);
+      await Future.delayed(const Duration(milliseconds: 300));
+      await _loadAll();
+    }
+  }
+
+  // ===============================
   // 액션
   // ===============================
   Future<void> _markAsReceived(OrderDetail detail) async {
@@ -194,171 +251,7 @@ class _GoodsProfillBuyPageState extends State<GoodsProfillBuyPage> {
     }
   }
 
-  /// ✅ 반품 요청 다이얼로그 (기능 그대로)
-  Future<void> _showRefundDialog(OrderDetail detail) async {
-    final p = detail.purchase;
-
-    if (p.pseq == null || p.pstatus != 4) {
-      _info('알림', '수령 완료된 주문만 반품 요청이 가능합니다.');
-      return;
-    }
-
-    final reasonController = TextEditingController();
-    bool isSubmitting = false;
-
-    Get.dialog(
-      StatefulBuilder(
-        builder: (_, setLocalState) {
-          Future<void> submit() async {
-            if (isSubmitting) return;
-
-            final reason = reasonController.text.trim();
-            if (reason.isEmpty) {
-              _info('알림', '반품 사유를 입력해 주세요.');
-              return;
-            }
-
-            setLocalState(() => isSubmitting = true);
-
-            try {
-              final nowStr = DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now());
-              final newRefund = Refund(
-                rdate: nowStr,
-                rreason: reason,
-                rstatus: 1,
-                rpseq: p.pseq!,
-              );
-
-              final id = await _refundDB.insertRefund(newRefund);
-              if (id <= 0) {
-                setLocalState(() => isSubmitting = false);
-                _error('실패', '반품 요청 등록 실패');
-                return;
-              }
-
-              _closeDialogIfOpen();
-
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (!mounted) return;
-
-                setState(() {
-                  _purchaseDetails.removeWhere((d) => d.purchase.pseq == p.pseq);
-
-                  _refundDetails.insert(
-                    0,
-                    RefundDetail(
-                      refund: Refund(
-                        rseq: id,
-                        rdate: newRefund.rdate,
-                        rreason: newRefund.rreason,
-                        rstatus: newRefund.rstatus,
-                        rpseq: newRefund.rpseq,
-                      ),
-                      purchase: p,
-                      goods: detail.goods,
-                    ),
-                  );
-
-                  _currentView = OrderView.refund;
-                });
-
-                _success('완료', '반품 요청이 등록되었습니다.');
-              });
-            } catch (e) {
-              setLocalState(() => isSubmitting = false);
-              _error('오류', '반품 요청 중 오류');
-            }
-          }
-
-          return Dialog(
-            insetPadding: const EdgeInsets.symmetric(horizontal: 18),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(18, 18, 18, 14),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('반품 요청', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  Padding(
-                    padding: const EdgeInsets.only(top: 6),
-                    child: Text(
-                      '사유를 입력하면 반품 요청이 접수됩니다.',
-                      style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(top: 14),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade100,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: Colors.grey.shade200),
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      child: TextField(
-                        controller: reasonController,
-                        enabled: !isSubmitting,
-                        maxLines: 4,
-                        decoration: const InputDecoration(
-                          border: InputBorder.none,
-                          hintText: '예) 사이즈가 맞지 않음',
-                        ),
-                      ),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(top: 16),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: isSubmitting ? null : _closeDialogIfOpen,
-                            style: OutlinedButton.styleFrom(
-                              side: const BorderSide(color: Colors.black),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                            ),
-                            child: const Text(
-                              '취소',
-                              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10), // ✅ 더미 제거
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: isSubmitting ? null : submit,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.black,
-                              foregroundColor: Colors.white,
-                              disabledBackgroundColor: Colors.grey.shade400,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                            ),
-                            child: isSubmitting
-                                ? const SizedBox(
-                                    width: 18,
-                                    height: 18,
-                                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                                  )
-                                : const Text('요청하기', style: TextStyle(fontWeight: FontWeight.bold)),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
-      barrierDismissible: false,
-    ).whenComplete(() => reasonController.dispose());
-  }
-
-  /// ✅ 반품 완료 + 재고복원 (기능 그대로)
+  /// ✅ 반품 완료 + 재고복원
   Future<void> _completeRefundAndRestore(RefundDetail detail) async {
     final rseq = detail.refund.rseq;
     final p = detail.purchase;
@@ -381,26 +274,7 @@ class _GoodsProfillBuyPageState extends State<GoodsProfillBuyPage> {
               const Text('반품 완료', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               Padding(
                 padding: const EdgeInsets.only(top: 6),
-                child: Text(
-                  '완료 시 재고가 복원되며 되돌릴 수 없습니다.',
-                  style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.only(top: 14),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.grey.shade200),
-                  ),
-                  child: const Text(
-                    '정말 반품을 완료할까요?',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                  ),
-                ),
+                child: Text('정말 반품을 완료할까요?', style: TextStyle(fontSize: 13, color: Colors.grey.shade600)),
               ),
               Padding(
                 padding: const EdgeInsets.only(top: 16),
@@ -414,31 +288,30 @@ class _GoodsProfillBuyPageState extends State<GoodsProfillBuyPage> {
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                           padding: const EdgeInsets.symmetric(vertical: 12),
                         ),
-                        child: const Text(
-                          '취소',
-                          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
-                        ),
+                        child: const Text('취소', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black)),
                       ),
                     ),
-                    const SizedBox(width: 10), // ✅ 더미 제거
+
+                    // ✅ (간격용 SizedBox -> Padding) + Expanded 규칙 유지
                     Expanded(
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.black,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                        ),
-                        onPressed: () async {
-                          _closeDialogIfOpen();
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 10),
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.black,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          onPressed: () async {
+                            _closeDialogIfOpen();
 
-                          final success = await _refundDB.completeRefundWithStockRestore(
-                            rseq: rseq,
-                            gseq: p.gseq!,
-                            restoreQty: p.pamount,
-                          );
+                            final success = await _refundDB.completeRefundWithStockRestore(
+                              rseq: rseq,
+                              gseq: p.gseq!,
+                              restoreQty: p.pamount,
+                            );
 
-                          WidgetsBinding.instance.addPostFrameCallback((_) async {
                             if (!mounted) return;
 
                             if (success) {
@@ -447,9 +320,9 @@ class _GoodsProfillBuyPageState extends State<GoodsProfillBuyPage> {
                             } else {
                               _error('실패', '반품 처리 실패');
                             }
-                          });
-                        },
-                        child: const Text('완료하기', style: TextStyle(fontWeight: FontWeight.bold)),
+                          },
+                          child: const Text('완료하기', style: TextStyle(fontWeight: FontWeight.bold)),
+                        ),
                       ),
                     ),
                   ],
@@ -489,15 +362,14 @@ class _GoodsProfillBuyPageState extends State<GoodsProfillBuyPage> {
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _currentView == OrderView.purchase
-                    ? _buildPurchaseView()
-                    : _buildRefundView(),
+                    ? _buildPurchaseViewList()
+                    : _buildRefundViewList(),
           ),
         ],
       ),
     );
   }
 
-  // ✅ 검색 UI 유지(기능 없음)
   Widget _buildSearchBar() {
     return Padding(
       padding: const EdgeInsets.all(15.0),
@@ -553,69 +425,125 @@ class _GoodsProfillBuyPageState extends State<GoodsProfillBuyPage> {
         ),
         child: Text(
           title,
-          style: TextStyle(
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-            fontSize: 15,
-          ),
+          style: TextStyle(fontWeight: isSelected ? FontWeight.bold : FontWeight.normal, fontSize: 15),
         ),
       ),
     );
-  }
-
-  // ===============================
-  // 날짜 그룹 공용 빌더
-  // ===============================
-  Map<String, List<T>> _groupByDate<T>(List<T> items, String Function(T) dateKeyFn) {
-    final Map<String, List<T>> grouped = {};
-    for (final item in items) {
-      final key = dateKeyFn(item);
-      grouped.putIfAbsent(key, () => []);
-      grouped[key]!.add(item);
-    }
-    return grouped;
-  }
-
-  List<String> _sortedDateKeys(Map<String, List<dynamic>> grouped) {
-    final keys = grouped.keys.toList()..sort((a, b) => b.compareTo(a));
-    return keys;
   }
 
   String _toDateKey(String dateTimeStr) {
     return dateTimeStr.split(' ')[0].replaceAll('-', '.');
   }
 
-  // ===============================
-  // 주문내역 View
-  // ===============================
-  Widget _buildPurchaseView() {
-    final visible = _purchaseDetails;
+  List<_ListRow> _buildPurchaseRows(List<OrderDetail> items) {
+    if (items.isEmpty) return const [];
 
+    final Map<String, List<OrderDetail>> grouped = {};
+    for (final d in items) {
+      final key = _toDateKey(d.purchase.pdate);
+      grouped.putIfAbsent(key, () => []);
+      grouped[key]!.add(d);
+    }
+
+    final dates = grouped.keys.toList()..sort((a, b) => b.compareTo(a));
+
+    final rows = <_ListRow>[];
+    for (final date in dates) {
+      rows.add(_ListRow.header(date));
+      for (final d in grouped[date]!) {
+        rows.add(_ListRow.order(d));
+      }
+    }
+    return rows;
+  }
+
+  List<_ListRow> _buildRefundRows(List<RefundDetail> items) {
+    if (items.isEmpty) return const [];
+
+    final Map<String, List<RefundDetail>> grouped = {};
+    for (final d in items) {
+      final key = _toDateKey(d.refund.rdate);
+      grouped.putIfAbsent(key, () => []);
+      grouped[key]!.add(d);
+    }
+
+    final dates = grouped.keys.toList()..sort((a, b) => b.compareTo(a));
+
+    final rows = <_ListRow>[];
+    for (final date in dates) {
+      rows.add(_ListRow.header(date));
+      for (final d in grouped[date]!) {
+        rows.add(_ListRow.refund(d));
+      }
+    }
+    return rows;
+  }
+
+  Widget _buildPurchaseViewList() {
+    final visible = _purchaseDetails;
     if (visible.isEmpty) {
       return Center(child: Text('$_currentUserId 님의 주문 내역이 없습니다.'));
     }
 
-    final grouped = _groupByDate<OrderDetail>(visible, (d) => _toDateKey(d.purchase.pdate));
-    final dates = _sortedDateKeys(grouped);
+    final rows = _buildPurchaseRows(visible);
 
-    return SingleChildScrollView(
+    return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 10),
-      child: Column(
-        children: [
-          for (final date in dates) ...[
-            Padding(
-              padding: const EdgeInsets.only(top: 15.0, left: 5, bottom: 8),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(date, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+      itemCount: rows.length,
+      itemBuilder: (context, index) {
+        final row = rows[index];
+
+        if (row.type == _RowType.header) {
+          return Padding(
+            padding: const EdgeInsets.only(top: 15.0, left: 5, bottom: 8),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                row.header ?? '',
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
             ),
-            for (final detail in grouped[date]!) _buildOrderItemCard(detail),
-          ],
-        ],
-      ),
+          );
+        }
+
+        return _buildOrderItemCard(row.order!);
+      },
     );
   }
 
+  Widget _buildRefundViewList() {
+    final visible = _refundDetails;
+    if (visible.isEmpty) {
+      return Center(child: Text('$_currentUserId 님의 반품 내역이 없습니다.'));
+    }
+
+    final rows = _buildRefundRows(visible);
+
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      itemCount: rows.length,
+      itemBuilder: (context, index) {
+        final row = rows[index];
+
+        if (row.type == _RowType.header) {
+          return Padding(
+            padding: const EdgeInsets.only(top: 15.0, left: 5, bottom: 8),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                row.header ?? '',
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ),
+          );
+        }
+
+        return _buildRefundItemCard(row.refund!);
+      },
+    );
+  }
+
+  // 카드 UI 이하(네 코드 그대로)
   Widget _buildOrderItemCard(OrderDetail detail) {
     final p = detail.purchase;
     final g = detail.goods;
@@ -647,7 +575,6 @@ class _GoodsProfillBuyPageState extends State<GoodsProfillBuyPage> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 썸네일
             Padding(
               padding: const EdgeInsets.only(right: 15),
               child: Container(
@@ -660,14 +587,20 @@ class _GoodsProfillBuyPageState extends State<GoodsProfillBuyPage> {
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(8),
                   child: img != null
-                      ? Image.memory(img, fit: BoxFit.cover, cacheWidth: 160, cacheHeight: 160)
+                      ? Image.memory(
+                          img,
+                          fit: BoxFit.cover,
+                          cacheWidth: 120,
+                          cacheHeight: 120,
+                          filterQuality: FilterQuality.low,
+                          gaplessPlayback: true,
+                        )
                       : const Center(
                           child: Icon(Icons.shopping_bag_outlined, color: Colors.grey, size: 40),
                         ),
                 ),
               ),
             ),
-            // 정보
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -700,8 +633,6 @@ class _GoodsProfillBuyPageState extends State<GoodsProfillBuyPage> {
                 ],
               ),
             ),
-
-            // 우측 상태/버튼
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
@@ -712,7 +643,7 @@ class _GoodsProfillBuyPageState extends State<GoodsProfillBuyPage> {
                     children: [
                       if (p.pstatus == 3)
                         SizedBox(
-                          height: 30, // ✅ 버튼 높이 고정은 유지
+                          height: 30,
                           child: ElevatedButton(
                             onPressed: () => _markAsReceived(detail),
                             style: ElevatedButton.styleFrom(
@@ -731,9 +662,9 @@ class _GoodsProfillBuyPageState extends State<GoodsProfillBuyPage> {
                         Padding(
                           padding: const EdgeInsets.only(top: 6),
                           child: SizedBox(
-                            height: 30, // ✅ 버튼 높이 고정은 유지
+                            height: 30,
                             child: OutlinedButton(
-                              onPressed: () => _showRefundDialog(detail),
+                              onPressed: () => _goRefundRequestPage(detail),
                               style: OutlinedButton.styleFrom(
                                 side: const BorderSide(color: Colors.black),
                                 padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -760,45 +691,10 @@ class _GoodsProfillBuyPageState extends State<GoodsProfillBuyPage> {
   Widget _buildStatusDisplay(String text, Color textColor) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade200,
-        borderRadius: BorderRadius.circular(5),
-      ),
+      decoration: BoxDecoration(color: Colors.grey.shade200, borderRadius: BorderRadius.circular(5)),
       child: Text(
         text,
         style: TextStyle(fontSize: 14, color: textColor, fontWeight: FontWeight.bold),
-      ),
-    );
-  }
-
-  // ===============================
-  // 반품내역 View
-  // ===============================
-  Widget _buildRefundView() {
-    final visible = _refundDetails;
-
-    if (visible.isEmpty) {
-      return Center(child: Text('$_currentUserId 님의 반품 내역이 없습니다.'));
-    }
-
-    final grouped = _groupByDate<RefundDetail>(visible, (d) => _toDateKey(d.refund.rdate));
-    final dates = _sortedDateKeys(grouped);
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      child: Column(
-        children: [
-          for (final date in dates) ...[
-            Padding(
-              padding: const EdgeInsets.only(top: 15.0, left: 5, bottom: 8),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(date, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              ),
-            ),
-            for (final detail in grouped[date]!) _buildRefundItemCard(detail),
-          ],
-        ],
       ),
     );
   }
@@ -835,7 +731,6 @@ class _GoodsProfillBuyPageState extends State<GoodsProfillBuyPage> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 썸네일
             Padding(
               padding: const EdgeInsets.only(right: 15),
               child: Container(
@@ -845,29 +740,27 @@ class _GoodsProfillBuyPageState extends State<GoodsProfillBuyPage> {
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(8),
                   child: img != null
-                      ? Image.memory(img, fit: BoxFit.cover, cacheWidth: 160, cacheHeight: 160)
+                      ? Image.memory(
+                          img,
+                          fit: BoxFit.cover,
+                          cacheWidth: 120,
+                          cacheHeight: 120,
+                          filterQuality: FilterQuality.low,
+                          gaplessPlayback: true,
+                        )
                       : Center(child: Text('반품', style: TextStyle(color: Colors.grey.shade500))),
                 ),
               ),
             ),
-            // 정보
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    title,
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                  Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500), overflow: TextOverflow.ellipsis),
                   if (engTitle.isNotEmpty)
                     Padding(
                       padding: const EdgeInsets.only(top: 3),
-                      child: Text(
-                        engTitle,
-                        style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                      child: Text(engTitle, style: TextStyle(fontSize: 12, color: Colors.grey.shade600), overflow: TextOverflow.ellipsis),
                     ),
                   Padding(
                     padding: const EdgeInsets.only(top: 5),
@@ -879,16 +772,13 @@ class _GoodsProfillBuyPageState extends State<GoodsProfillBuyPage> {
                   ),
                   Padding(
                     padding: const EdgeInsets.only(top: 2),
-                    child: Text(
-                      '요청일: ${r.rdate.split(' ')[0]}',
-                      style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
-                    ),
+                    child: Text('요청일: ${r.rdate.split(' ')[0]}', style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
                   ),
                   if (r.rstatus == 2)
                     Padding(
                       padding: const EdgeInsets.only(top: 10),
                       child: SizedBox(
-                        height: 32, // ✅ 버튼 높이 고정은 유지
+                        height: 32,
                         child: ElevatedButton(
                           onPressed: () => _completeRefundAndRestore(detail),
                           style: ElevatedButton.styleFrom(
@@ -897,25 +787,19 @@ class _GoodsProfillBuyPageState extends State<GoodsProfillBuyPage> {
                             padding: const EdgeInsets.symmetric(horizontal: 12),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
                           ),
-                          child: const Text(
-                            '반품 완료하기',
-                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                          ),
+                          child: const Text('반품 완료하기', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                         ),
                       ),
                     ),
                 ],
               ),
             ),
-
-            // 상태 뱃지
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               decoration: BoxDecoration(color: Colors.grey.shade200, borderRadius: BorderRadius.circular(5)),
               child: Text(
                 statusText,
-                style: TextStyle(fontSize: 14, color: statusColor, fontWeight: FontWeight.bold),
-              ),
+                style: TextStyle(fontSize: 14, color: statusColor, fontWeight: FontWeight.bold)),
             ),
           ],
         ),
