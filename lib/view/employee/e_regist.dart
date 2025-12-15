@@ -19,8 +19,7 @@ class _ERegistState extends State<ERegist> {
   late final TextEditingController nameController;
   late final TextEditingController phoneController;
 
-  late final EmployeeDatabase employee; // ✅ customer → employee
-
+  late final EmployeeDatabase employee;
   late bool _isIdChecked;
   String _checkedEmail = '';
 
@@ -43,7 +42,7 @@ class _ERegistState extends State<ERegist> {
     nameController = TextEditingController();
     phoneController = TextEditingController();
 
-    employee = EmployeeDatabase(); // ✅
+    employee = EmployeeDatabase();
 
     _isIdChecked = false;
     _checkedEmail = '';

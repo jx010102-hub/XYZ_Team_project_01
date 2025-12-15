@@ -6,7 +6,6 @@ import 'package:xyz_project_01/util/message.dart';
 import 'package:xyz_project_01/vm/database/supply_order_database.dart';
 
 class SMain extends StatefulWidget {
-  // ✅ sid/sname 유지 (기능 유지)
   final String sid;
   final String sname;
 
@@ -77,7 +76,7 @@ class _SMainState extends State<SMain> {
     int success = 0;
 
     try {
-      // ✅ 선택된 발주들만 승인
+      // 선택된 발주들만 승인
       for (final oseq in _selectedOseqs) {
         final order = _pendingOrders.firstWhere((o) => o.oseq == oseq);
         final r = await _orderDB.approveOrderAndAddStock(
@@ -296,7 +295,7 @@ class _SMainState extends State<SMain> {
   }
 }
 
-// ✅ 중복되는 카드 내부 텍스트 영역만 위젯으로 분리 (UI 동일, 코드만 정리)
+// 중복되는 카드 내부 텍스트 영역만 위젯으로 분리
 class _OrderInfo extends StatelessWidget {
   final SupplyOrder order;
   const _OrderInfo({required this.order});

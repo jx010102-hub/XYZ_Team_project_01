@@ -5,14 +5,12 @@ import 'package:xyz_project_01/vm/database/database_handler.dart';
 class PurchaseDatabase {
   final DatabaseHandler handler = DatabaseHandler();
 
-  // ===============================
   // Create
-  // ===============================
   Future<int> insertPurchase(Purchase purchase) async {
     final db = await handler.initializeDB();
 
     final map = purchase.toMap();
-    map.remove('pseq'); // AUTOINCREMENT
+    map.remove('pseq');
 
     return db.insert(
       'purchase',
@@ -21,11 +19,7 @@ class PurchaseDatabase {
     );
   }
 
-  // ===============================
-  // Read
-  // ===============================
-
-  /// 유저 구매내역 조회 (옵션: status로 필터)
+  // 유저 구매내역 조회 (status로 필터)
   Future<List<Purchase>> queryPurchasesForUser(
     String userId, {
     int? status,
@@ -46,12 +40,11 @@ class PurchaseDatabase {
     return maps.map(Purchase.fromMap).toList();
   }
 
-  /// 기존 코드 호환용(중복) - 내부 위임
   Future<List<Purchase>> queryPurchaseByUserId(String userId) async {
     return queryPurchasesForUser(userId);
   }
 
-  /// pseq 단건 조회 (refund.rpseq -> purchase 매핑용)
+  // pseq 단건 조회
   Future<Purchase?> queryPurchaseByPseq(int pseq) async {
     final db = await handler.initializeDB();
 
@@ -66,7 +59,7 @@ class PurchaseDatabase {
     return Purchase.fromMap(maps.first);
   }
 
-  /// pseq 리스트 조회 (IN)
+  // pseq 리스트 조회
   Future<List<Purchase>> queryPurchasesByPseqList(List<int> pseqList) async {
     if (pseqList.isEmpty) return [];
 
@@ -81,7 +74,7 @@ class PurchaseDatabase {
     return maps.map(Purchase.fromMap).toList();
   }
 
-  /// 특정 상태들을 제외하고 유저 주문내역 조회
+  // 특정 상태들을 제외하고 유저 주문내역 조회
   Future<List<Purchase>> queryPurchasesForUserExcludeStatus(
     String userId,
     List<int> excludeStatuses,
@@ -104,7 +97,7 @@ class PurchaseDatabase {
     return maps.map(Purchase.fromMap).toList();
   }
 
-  /// 반품 요청된 주문(=refund에 존재하는 rpseq)은 주문내역에서 제외
+  // 반품 요청된 주문은 주문내역에서 제외
   Future<List<Purchase>> queryPurchasesForUserExcludeRefunded(String userId) async {
     final db = await handler.initializeDB();
 
@@ -126,7 +119,7 @@ class PurchaseDatabase {
     return maps.map(Purchase.fromMap).toList();
   }
 
-  /// 승인 대기 목록(pstatus=2)
+  // 승인 대기 목록(pstatus=2)
   Future<List<Purchase>> queryPendingPurchases() async {
     final db = await handler.initializeDB();
 
@@ -140,9 +133,7 @@ class PurchaseDatabase {
     return maps.map(Purchase.fromMap).toList();
   }
 
-  // ===============================
   // Update
-  // ===============================
   Future<int> updatePurchaseStatus(int pseq, int newStatus) async {
     final db = await handler.initializeDB();
 
@@ -154,12 +145,12 @@ class PurchaseDatabase {
     );
   }
 
-  /// 승인 처리: 3으로 변경
+  // 승인 처리: 3으로 변경
   Future<int> updatePurchaseToApproved(int pseq) async {
     return updatePurchaseStatus(pseq, 3);
   }
 
-  /// 수령 완료: 4로 변경
+  // 수령 완료: 4로 변경
   Future<int> updatePurchaseToReceived(int pseq) async {
     return updatePurchaseStatus(pseq, 4);
   }

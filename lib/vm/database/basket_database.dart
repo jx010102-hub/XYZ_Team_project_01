@@ -20,10 +20,7 @@ class BasketDatabase {
     return maps.map(Basket.fromMap).toList();
   }
 
-  // ✅ upsert: 같은 옵션(userid+gname+gsize+gcolor)이면 qty 누적, 없으면 insert
-  // 반환값:
-  // - update면 영향 row 수(보통 1)
-  // - insert면 새 row id
+  // upsert: 같은 옵션이면 qty 누적, 없으면 insert
   Future<int> upsertBasket({
     required String userid,
     required String gname,
@@ -33,7 +30,7 @@ class BasketDatabase {
   }) async {
     final db = await _db();
 
-    // 1) 기존 데이터 조회
+    // 기존 데이터 조회
     final exist = await db.query(
       'basket',
       columns: ['bseq', 'qty'],
@@ -42,7 +39,7 @@ class BasketDatabase {
       limit: 1,
     );
 
-    // 2) 있으면 qty 누적 update
+    // 있으면 qty 누적 update
     if (exist.isNotEmpty) {
       final bseq = exist.first['bseq'] as int;
       final oldQty = (exist.first['qty'] as int?) ?? 0;
@@ -56,7 +53,7 @@ class BasketDatabase {
       );
     }
 
-    // 3) 없으면 insert
+    // 없으면 insert
     return db.insert(
       'basket',
       {
@@ -106,7 +103,7 @@ class BasketDatabase {
     );
   }
 
-  // ✅ 여러개 삭제(결제 성공한 것만 장바구니에서 제거)
+  // 결제 성공한 것만 장바구니에서 제거
   Future<int> deleteBasketByBseqList(List<int> bseqList) async {
     if (bseqList.isEmpty) return 0;
 

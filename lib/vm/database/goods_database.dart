@@ -5,16 +5,14 @@ import 'package:xyz_project_01/vm/database/database_handler.dart';
 class GoodsDatabase {
   final DatabaseHandler handler = DatabaseHandler();
 
-  // ===============================
   // 공용 유틸
-  // ===============================
   Future<Database> _db() => handler.initializeDB();
 
   String _placeholders(int n) => List.filled(n, '?').join(',');
 
   Future<List<Goods>> _queryGoodsByGseqList({
     required List<int> gseqList,
-    required String selectSql, // "SELECT ... FROM goods WHERE gseq IN (...)"
+    required String selectSql,
     bool emptyReturn = true,
   }) async {
     if (gseqList.isEmpty) return emptyReturn ? [] : [];
@@ -23,11 +21,9 @@ class GoodsDatabase {
     return maps.map((e) => Goods.fromMap(e)).toList();
   }
 
-  // ===============================
   // Read
-  // ===============================
 
-  /// 빠른 검색 (대표 상품만)
+  // 빠른 검색 (대표 상품만)
   Future<List<Goods>> queryRepresentativeGoods() async {
     final db = await _db();
     final result = await db.rawQuery('''
@@ -51,7 +47,7 @@ class GoodsDatabase {
     final db = await _db();
     final result = await db.query(
       'goods',
-      columns: ['gseq'], // ✅ 존재 여부만 보면 되니 최소 컬럼
+      columns: ['gseq'],
       where: 'gname = ? AND gsize = ? AND gcolor = ?',
       whereArgs: [gname, gsize, gcolor],
       limit: 1,
@@ -113,10 +109,6 @@ class GoodsDatabase {
     ''';
     return _queryGoodsByGseqList(gseqList: gseqList, selectSql: sql);
   }
-
-  // ===============================
-  // Create / Update / Delete
-  // ===============================
 
   // 입력 (manufacturer, price 포함)
   Future<int> insertGoods(Goods goods) async {
@@ -202,8 +194,7 @@ class GoodsDatabase {
     );
   }
 
-  /// 재고(gsumamount) 업데이트
-  /// - 현재 방식: SELECT 후 UPDATE (기능 안전 / 0 clamp)
+  // 재고(gsumamount) 업데이트
   Future<int> updateGoodsQuantity({
     required int gseq,
     required int quantityChange,

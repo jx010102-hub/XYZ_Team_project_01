@@ -9,8 +9,7 @@ import 'package:xyz_project_01/model/goods.dart';
 import 'package:xyz_project_01/view/insert/goods_detail_page.dart';
 import 'package:xyz_project_01/vm/database/example_data.dart';
 
-
-  // Product 모델
+// Product 모델
 class Product {
   final String gname;
   final String gengname;
@@ -35,49 +34,49 @@ class Product {
   });
 }
 
-  // ExampleData -> Product 변환
-  List<Product> loadAllProducts() {
-    final List<Map<String, dynamic>> rawGoods = ExampleData.goods;
-    final List<Product> products = [];
+// ExampleData -> Product 변환
+List<Product> loadAllProducts() {
+  final List<Map<String, dynamic>> rawGoods = ExampleData.goods;
+  final List<Product> products = [];
 
-    const String unifiedManufacturer = 'XYZ';
+  const String unifiedManufacturer = 'XYZ';
 
-    // ✅ gname 기준 중복 제거
-    final Set<String> seenNames = {};
+  // ✅ gname 기준 중복 제거
+  final Set<String> seenNames = {};
 
-    for (final rawProduct in rawGoods) {
-      final String gname = rawProduct['gname'] as String;
+  for (final rawProduct in rawGoods) {
+    final String gname = rawProduct['gname'] as String;
 
-      // 이미 같은 이름이 들어갔으면 스킵 (사이즈/색상 다른 행 제거)
-      if (seenNames.contains(gname)) continue;
-      seenNames.add(gname);
+    // 이미 같은 이름이 들어갔으면 스킵 (사이즈/색상 다른 행 제거)
+    if (seenNames.contains(gname)) continue;
+    seenNames.add(gname);
 
-      products.add(
-        Product(
-          gname: gname,
-          gengname: rawProduct['gengname'] as String,
-          gcategory: rawProduct['gcategory'] as String,
+    products.add(
+      Product(
+        gname: gname,
+        gengname: rawProduct['gengname'] as String,
+        gcategory: rawProduct['gcategory'] as String,
 
-          // 대표로 1개만 보여줄 거라 첫 행의 값만 사용됨
-          gsize: rawProduct['gsize'] as String,
-          gcolor: rawProduct['gcolor'] as String,
+        // 대표로 1개만 보여줄 거라 첫 행의 값만 사용됨
+        gsize: rawProduct['gsize'] as String,
+        gcolor: rawProduct['gcolor'] as String,
 
-          mainimagePath: rawProduct['mainimagePath'] as String,
-          gsumamount: rawProduct['gsumamount'] as int,
-          price: (rawProduct['price'] as num).toInt(),
-          manufacturer: rawProduct['manufacturer'] as String? ?? unifiedManufacturer,
-        ),
-      );
-    }
-
-    return products;
+        mainimagePath: rawProduct['mainimagePath'] as String,
+        gsumamount: rawProduct['gsumamount'] as int,
+        price: (rawProduct['price'] as num).toInt(),
+        manufacturer: rawProduct['manufacturer'] as String? ?? unifiedManufacturer,
+      ),
+    );
   }
+
+  return products;
+}
 
 // Page
 class GCategory extends StatefulWidget {
   final String userid;
   const GCategory({super.key, required this.userid});
-  
+
   @override
   State<GCategory> createState() => _GCategoryState();
 }
@@ -117,7 +116,7 @@ class _GCategoryState extends State<GCategory> {
       final ByteData data = await rootBundle.load(assetPath);
       return data.buffer.asUint8List();
     } catch (e) {
-
+      // ignore: avoid_print
       print("❌ [Image Load Error] Asset 로드 실패: $assetPath, Error: $e");
       return null;
     }

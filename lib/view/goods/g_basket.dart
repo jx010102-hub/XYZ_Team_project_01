@@ -223,11 +223,10 @@ class _GBasketState extends State<GBasket> {
                     padding: const EdgeInsets.only(top: 12),
                     child: Text(gname, maxLines: 1, overflow: TextOverflow.ellipsis),
                   ),
-                  const Padding(
-                    padding: EdgeInsets.only(top: 14),
-                    child: Text('사이즈', style: TextStyle(color: Colors.grey)),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 14),
+                    child: const Text('사이즈', style: TextStyle(color: Colors.grey)),
                   ),
-
                   DropdownButton<String>(
                     value: tempSize,
                     isExpanded: true,
@@ -237,11 +236,10 @@ class _GBasketState extends State<GBasket> {
                       sheetSet(() => tempSize = v);
                     },
                   ),
-                  const Padding(
-                    padding: EdgeInsets.only(top: 10),
-                    child: Text('색상', style: TextStyle(color: Colors.grey)),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 10),
+                    child: const Text('색상', style: TextStyle(color: Colors.grey)),
                   ),
-
                   DropdownButton<String>(
                     value: tempColor,
                     isExpanded: true,
@@ -396,8 +394,6 @@ class _GBasketState extends State<GBasket> {
                             goods?.gengname ?? '',
                             style: const TextStyle(fontSize: 12, color: Colors.grey),
                           ),
-
-                          // (기존: SizedBox(height: 6))
                           Padding(
                             padding: const EdgeInsets.only(top: 6),
                             child: Text(
@@ -409,7 +405,6 @@ class _GBasketState extends State<GBasket> {
                       ),
                     ),
                   ),
-
                   GestureDetector(
                     onTap: () => _deleteItem(d),
                     child: const Icon(Icons.close, color: Colors.grey, size: 20),
@@ -452,8 +447,7 @@ class _GBasketState extends State<GBasket> {
                         padding: const EdgeInsets.only(top: 5),
                         child: Text(
                           _formatCurrency(sum),
-                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                        ),
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                       ),
                     ],
                   ),
@@ -592,7 +586,6 @@ class _GBasketState extends State<GBasket> {
                           ),
                         ),
                       ),
-
                       TextButton(
                         onPressed: () => msg.info('안내', '매장 변경은 기존 흐름대로 GMap 연결하면 됨'),
                         child: const Text('변경', style: TextStyle(color: Colors.blue, fontSize: 12)),

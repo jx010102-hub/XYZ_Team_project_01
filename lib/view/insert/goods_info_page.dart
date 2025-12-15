@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 import 'package:xyz_project_01/model/goods.dart';
 import 'package:xyz_project_01/util/message.dart';
 
@@ -19,7 +20,6 @@ class GoodsInfoPage extends StatefulWidget {
 class _GoodsInfoPageState extends State<GoodsInfoPage> {
   final Message message = Message();
 
-  // 상품의 DB 이미지 리스트
   final List<Uint8List> _infoImages = [];
 
   @override
@@ -40,7 +40,6 @@ class _GoodsInfoPageState extends State<GoodsInfoPage> {
       ..clear()
       ..addAll(rawImages.whereType<Uint8List>().toSet().toList());
 
-    // 이미지가 전혀 없을 경우: Message 경고
     if (_infoImages.isEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         message.warning('이미지 없음', '${widget.goods.gname}에 DB 이미지가 없습니다.');
@@ -87,33 +86,26 @@ class _GoodsInfoPageState extends State<GoodsInfoPage> {
           children: [
             _buildProductTitleSection(),
             _sectionDivider(),
-
-            // DB 이미지들 표시
             ..._infoImages.asMap().entries.map((entry) {
-              final index = entry.key;
-              final imageBytes = entry.value;
-
               return Column(
                 children: [
                   _buildInfoSection(
-                    title: _imageTitle(index),
-                    imageBytes: imageBytes,
+                    title: _imageTitle(entry.key),
+                    imageBytes: entry.value,
                   ),
                   _sectionDivider(),
                 ],
               );
             }),
-
-            // (임시) 사이즈 정보 섹션
             _buildAssetInfoSection(
               title: '사이즈 정보',
               imagePath: 'images/size1.png',
             ),
-
             _sectionDivider(),
-
-            // ✅ 기존 SizedBox(바닥 여백) → Padding으로 교체 (UI 동일)
-            const Padding(padding: EdgeInsets.only(bottom: 100)),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 100),
+              child: Container(),
+            ),
           ],
         ),
       ),
@@ -135,21 +127,25 @@ class _GoodsInfoPageState extends State<GoodsInfoPage> {
               color: Colors.black,
             ),
           ),
-          const Padding(padding: EdgeInsets.only(top: 5)),
-          Text(
-            widget.goods.gengname,
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.grey[600],
+          Padding(
+            padding: const EdgeInsets.only(top: 5),
+            child: Text(
+              widget.goods.gengname,
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey[600],
+              ),
             ),
           ),
-          const Padding(padding: EdgeInsets.only(top: 10)),
-          const Text(
-            "150,000원",
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.red,
+          Padding(
+            padding: const EdgeInsets.only(top: 10),
+            child: Text(
+              '${NumberFormat('#,###').format(widget.goods.price.round())}원',
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.red,
+              ),
             ),
           ),
         ],
@@ -167,10 +163,7 @@ class _GoodsInfoPageState extends State<GoodsInfoPage> {
       children: [
         if (showTitle)
           Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 20.0,
-              vertical: 15.0,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 15.0),
             child: Text(
               title,
               style: const TextStyle(
@@ -179,22 +172,25 @@ class _GoodsInfoPageState extends State<GoodsInfoPage> {
               ),
             ),
           ),
-        Image.memory(
-          imageBytes,
-          fit: BoxFit.cover,
-          width: double.infinity,
-          errorBuilder: (_, __, ___) {
-            return Container(
-              height: 200,
-              color: Colors.grey.shade200,
-              alignment: Alignment.center,
-              child: const Text(
-                '이미지 로드 실패 (DB)',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.red),
-              ),
-            );
-          },
+        Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: Image.memory(
+            imageBytes,
+            fit: BoxFit.cover,
+            width: double.infinity,
+            errorBuilder: (_, __, ___) {
+              return Container(
+                height: 200,
+                color: Colors.grey.shade200,
+                alignment: Alignment.center,
+                child: const Text(
+                  '이미지 로드 실패 (DB)',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.red),
+                ),
+              );
+            },
+          ),
         ),
       ],
     );
@@ -210,10 +206,7 @@ class _GoodsInfoPageState extends State<GoodsInfoPage> {
       children: [
         if (showTitle)
           Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 20.0,
-              vertical: 15.0,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 15.0),
             child: Text(
               title,
               style: const TextStyle(
@@ -222,22 +215,25 @@ class _GoodsInfoPageState extends State<GoodsInfoPage> {
               ),
             ),
           ),
-        Image.asset(
-          imagePath,
-          fit: BoxFit.cover,
-          width: double.infinity,
-          errorBuilder: (_, __, ___) {
-            return Container(
-              height: 200,
-              color: Colors.grey.shade200,
-              alignment: Alignment.center,
-              child: Text(
-                '이미지 로드 실패: $imagePath',
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.red),
-              ),
-            );
-          },
+        Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: Image.asset(
+            imagePath,
+            fit: BoxFit.cover,
+            width: double.infinity,
+            errorBuilder: (_, __, ___) {
+              return Container(
+                height: 200,
+                color: Colors.grey.shade200,
+                alignment: Alignment.center,
+                child: Text(
+                  '이미지 로드 실패: $imagePath',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.red),
+                ),
+              );
+            },
+          ),
         ),
       ],
     );
@@ -267,26 +263,27 @@ class _GoodsInfoPageState extends State<GoodsInfoPage> {
               color: Colors.grey,
             ),
           ),
-          const Padding(padding: EdgeInsets.only(left: 15)),
-          Expanded(
-            child: ElevatedButton(
-              onPressed: () {
-                // 제품 정보 페이지에서 구매하기 누르면 상세로 돌아감
-                Get.back();
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                minimumSize: const Size(double.infinity, 50),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+          Padding(
+            padding: const EdgeInsets.only(left: 15),
+            child: Expanded(
+              child: ElevatedButton(
+                onPressed: () {
+                  Get.back();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  minimumSize: const Size(double.infinity, 50),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
-              ),
-              child: const Text(
-                '구매하기',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                child: const Text(
+                  '구매하기',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
                 ),
               ),
             ),

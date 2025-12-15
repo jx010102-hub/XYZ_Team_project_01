@@ -24,7 +24,7 @@ class _CLoginState extends State<CLogin> {
 
   late final CustomerDatabase customer;
 
-  late bool i; // 로그인 체크(기존 변수 유지)
+  late bool i; // 로그인 체크
   late int imageTapCount;
 
   final Message message = const Message();
@@ -62,7 +62,7 @@ class _CLoginState extends State<CLogin> {
                   padding: const EdgeInsets.only(bottom: 50),
                   child: GestureDetector(
                     onTap: () {
-                      // 이메일 입력창이 xyz일 때만 3번 탭하면 직원 로그인으로 이동(기존 로직 유지)
+                      // 이메일 입력창이 xyz일 때만 3번 탭하면 직원 로그인으로 이동
                       if (idController.text.trim() == 'xyz') {
                         imageTapCount++;
                         if (imageTapCount >= 3) {
@@ -122,7 +122,7 @@ class _CLoginState extends State<CLogin> {
                         child: const Text('회원가입'),
                       ),
                       SizedBox(
-                        height: 20, // 높이 제어(간격용 아님) → 유지
+                        height: 20,
                         child: VerticalDivider(
                           color: Colors.grey,
                           thickness: 2,
@@ -133,7 +133,7 @@ class _CLoginState extends State<CLogin> {
                         child: const Text('이메일 찾기'),
                       ),
                       SizedBox(
-                        height: 20, // 높이 제어(간격용 아님) → 유지
+                        height: 20,
                         child: VerticalDivider(
                           color: Colors.grey,
                           thickness: 2,

@@ -48,7 +48,7 @@ class _AStockStatusState extends State<AStockStatus> {
   ];
   final List<String> _years = const ['2023', '2024', '2025'];
 
-  // 더미 제조사 리스트(기존 유지)
+  // 더미 제조사 리스트
   final List<String> _manufacturers = const ['나이키', '아디다스', 'XYZ'];
 
   @override
@@ -113,7 +113,7 @@ class _AStockStatusState extends State<AStockStatus> {
         final gseq = _selectedGoods!.gseq;
         _productCodeController.text = (gseq ?? '').toString();
 
-        // 제조사 최신 반영(비어있으면 기존 선택 유지)
+        // 제조사 최신 반영
         final dbManu = options.first.manufacturer.trim();
         if (dbManu.isNotEmpty) {
           _selectedManufacturer = dbManu;
@@ -167,7 +167,7 @@ class _AStockStatusState extends State<AStockStatus> {
 
     final order = SupplyOrder(
       manufacturer: manufacturer,
-      requester: '', // 기존 유지(나중에 로그인 직원 정보 연결 가능)
+      requester: '',
       gseq: v.gseq!,
       gname: v.gname,
       gsize: v.gsize,
@@ -556,7 +556,7 @@ class _AStockStatusState extends State<AStockStatus> {
               children: [
                 SizedBox(
                   width: 100,
-                  height: 100, // ✅ 크기 고정은 유지
+                  height: 100,
                   child: CustomPaint(
                     painter: _StockPainter(stockRatio: stockRatio),
                     child: Center(

@@ -81,7 +81,7 @@ class _CFindPwState extends State<CFindPw> {
                   padding: const EdgeInsets.only(bottom: 30),
                   child: ElevatedButton(
                     onPressed: () {
-                      // 기존 기능 유지(비어있음)
+                      //
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.black,

@@ -49,7 +49,6 @@ class _PayPageState extends State<PayPage> {
   String _formatCurrency(int amount) => '${_currencyFormatter.format(amount)}원';
 
   int _payWayFromSelected(int selected) {
-    // 기존 로직 유지: 0->1, 1->2, 2->3
     if (selected == 0) return 1;
     if (selected == 1) return 2;
     return 3;
@@ -385,7 +384,7 @@ class _PayPageState extends State<PayPage> {
       return;
     }
 
-    // 0) gseq 확정: DB에서 해당 옵션(이름/사이즈/색상) 다시 조회
+    // gseq 확정: DB에서 해당 옵션 다시 조회
     final goodsDB = GoodsDatabase();
     final variant = await goodsDB.getGoodsVariant(
       gname: widget.goods.gname,
@@ -416,7 +415,6 @@ class _PayPageState extends State<PayPage> {
       pdiscount: 0.0,
       userid: widget.userid,
 
-      // 반드시 DB에 존재하는 gseq 사용
       gseq: variant.gseq,
       gsize: widget.selectedSize,
       gcolor: widget.selectedColor,

@@ -111,7 +111,9 @@ class _GProfillState extends State<GProfill> {
               debugPrint('알림 아이콘 클릭됨');
             },
           ),
-          const Padding(padding: EdgeInsets.only(right: 10)),
+          const Padding(
+            padding: EdgeInsets.only(right: 10),
+          ),
         ],
       ),
       body: SingleChildScrollView(
@@ -119,8 +121,6 @@ class _GProfillState extends State<GProfill> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildSectionDivider(),
-
-            // --- 첫 번째 섹션 ---
             _buildItemWithDivider(
               title: '주문내역',
               onTap: () {
@@ -137,13 +137,9 @@ class _GProfillState extends State<GProfill> {
               title: '언어',
               showDivider: false,
             ),
-
             _buildSectionDivider(),
-
-            // --- 두 번째 섹션 ---
             _buildItemWithDivider(title: '회사 정보'),
             _buildItemWithDivider(title: '앱 정보', showDivider: false),
-
             _buildSectionDivider(),
             // 로그아웃
             _buildItemWithDivider(
@@ -155,8 +151,9 @@ class _GProfillState extends State<GProfill> {
                 Get.offAll(() => const CLogin());
               },
             ),
-
-            const Padding(padding: EdgeInsets.only(bottom: 100)),
+            const Padding(
+              padding: EdgeInsets.only(bottom: 100),
+            ),
           ],
         ),
       ),

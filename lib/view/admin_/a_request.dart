@@ -261,7 +261,7 @@ class _ARequstState extends State<ARequst> {
             padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
             child: SizedBox(
               width: double.infinity,
-              height: 50, // ✅ 버튼 크기 고정이라 유지
+              height: 50,
               child: ElevatedButton(
                 onPressed: (_isApproving || _requestDetails.isEmpty)
                     ? null
@@ -276,7 +276,7 @@ class _ARequstState extends State<ARequst> {
                 child: _isApproving
                     ? const SizedBox(
                         width: 18,
-                        height: 18, // ✅ 로딩 크기 고정이라 유지
+                        height: 18,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
                           color: Colors.white,

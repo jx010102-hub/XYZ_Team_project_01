@@ -15,8 +15,6 @@ class SeedData {
       final data = await rootBundle.load(path);
       return data.buffer.asUint8List();
     } catch (e) {
-      // 이미지 로드 실패 시 로그
-      // (앱 동작 영향 없게 null 반환)
       print('❌ [SeedData Error] 이미지 로드 실패: $path, 오류: $e');
       return null;
     }
@@ -26,15 +24,15 @@ class SeedData {
     final db = await handler.initializeDB();
     int insertCount = 0;
 
-    // 같은 gname에 대한 이미지 로딩 최적화(기존 유지)
+    // 같은 gname에 대한 이미지 로딩 최적화
     final Map<String, Uint8List?> loadedImages = {};
 
     print('======================================================');
     print('[SeedData] 데이터베이스 초기화(Seed) 시작');
 
-    // ✅ 전체를 트랜잭션으로 묶어서 "반쪽 삽입" 방지
+    // 트랜잭션
     await db.transaction((txn) async {
-      // 1) customer (기준: cemail)
+      // customer (기준: cemail)
       for (final row in ExampleData.customers) {
         final exists = await txn.query(
           "customer",
@@ -47,7 +45,7 @@ class SeedData {
         }
       }
 
-      // 3) branch (기준: bid)
+      // branch (기준: bid)
       for (final row in ExampleData.branches) {
         final exists = await txn.query(
           "branch",
@@ -60,7 +58,7 @@ class SeedData {
         }
       }
 
-      // 4) employee (기준: eemail)
+      // employee (기준: eemail)
       for (final row in ExampleData.employees) {
         final exists = await txn.query(
           "employee",
@@ -73,7 +71,7 @@ class SeedData {
         }
       }
 
-      // 5) supplier (기준: sid)
+      // supplier (기준: sid)
       for (final row in ExampleData.suppliers) {
         final exists = await txn.query(
           "supplier",
@@ -86,7 +84,7 @@ class SeedData {
         }
       }
 
-      // 2) goods 데이터 삽입 (이미지 포함)
+      // goods 데이터 삽입 (이미지 포함)
       for (final row in ExampleData.goods) {
         final gname = row['gname'];
         final gsize = row['gsize'];
@@ -106,7 +104,6 @@ class SeedData {
         Uint8List? backImage;
         Uint8List? sideImage;
 
-        // 캐싱(기존 로직 유지)
         final cacheMainKey = '${gname}_main';
         final cacheTopKey = '${gname}_top';
         final cacheBackKey = '${gname}_back';
@@ -129,8 +126,7 @@ class SeedData {
           sideImage = loadedImages[cacheSideKey];
         }
 
-        // ✅ goods 테이블 컬럼 맞추기: manufacturer, price 포함
-        // ExampleData에 없을 수도 있으니 안전 기본값 처리
+        // goods 테이블 컬럼 맞추기: manufacturer, price 포함
         final insertData = <String, dynamic>{
           'gsumamount': row['gsumamount'],
           'gname': gname,
@@ -153,7 +149,7 @@ class SeedData {
       }
 
       // 6) purchase
-      // ✅ 중복 기준 강화: userid + gseq + gsize + gcolor + pdate
+      // 중복 기준: userid + gseq + gsize + gcolor + pdate
       for (final row in ExampleData.purchases) {
         final exists = await txn.query(
           "purchase",
@@ -173,7 +169,7 @@ class SeedData {
         }
       }
 
-      // 7) refund (기준: rdate + rpseq) - 기존 유지
+      // 7refund (기준: rdate + rpseq)
       for (final row in ExampleData.refunds) {
         final exists = await txn.query(
           "refund",
@@ -186,7 +182,7 @@ class SeedData {
         }
       }
 
-      // 8) approval (기준: adate + aoseq) - 기존 유지
+      // approval (기준: adate + aoseq)
       for (final row in ExampleData.approvals) {
         final exists = await txn.query(
           "approval",
@@ -199,7 +195,7 @@ class SeedData {
         }
       }
 
-      // 9) orders (기준: odate + oamount) - 기존 유지
+      // orders (기준: odate + oamount)
       for (final row in ExampleData.orders) {
         final exists = await txn.query(
           "orders",

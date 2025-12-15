@@ -125,11 +125,8 @@ class _AdminAddState extends State<AdminAdd> {
           gsumamount: 50,
           gname: gname,
           gengname: gengname,
-
-          // ✅ 여기 핵심: "250" 같은 단일 사이즈로 저장
           gsize: s.toString(),
-
-          gcolor: '기본',      // 색상도 나중에 옵션이면 여기도 루프/선택값으로 확장
+          gcolor: '기본',
           gcategory: '기타',
           manufacturer: manufacturer,
           price: price,

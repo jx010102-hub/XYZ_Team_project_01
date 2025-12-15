@@ -44,7 +44,6 @@ class _RefundRequestPageState extends State<RefundRequestPage> {
     super.dispose();
   }
 
-  // ✅ 즉시 닫기 버전: 결과 상관없이 무조건 pop
   void _submitAndCloseNow() {
     if (_isSubmitting) return;
 

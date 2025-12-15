@@ -204,9 +204,7 @@ class _GMainState extends State<GMain> with AutomaticKeepAliveClientMixin {
     );
   }
 
-  // -----------------------
   // Widgets
-  // -----------------------
 
   // 메인 슬라이더 카드
   Widget _buildShoeCard(Goods goods) {
@@ -411,9 +409,7 @@ class _GMainState extends State<GMain> with AutomaticKeepAliveClientMixin {
   }
 }
 
-// ------------------------------
-// 공통 섹션 타이틀(가독성만)
-// ------------------------------
+// 섹션 타이틀
 class _SectionTitle extends StatelessWidget {
   final String title;
   final EdgeInsets padding;

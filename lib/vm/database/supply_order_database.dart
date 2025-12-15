@@ -28,7 +28,7 @@ class SupplyOrderDatabase {
     );
   }
 
-  /// 제조사별 대기(0) 발주 조회 - SMain에서 사용 중
+  // 제조사별 대기(0) 발주 조회
   Future<List<SupplyOrder>> queryPendingByManufacturer(String manufacturer) async {
     final Database db = await handler.initializeDB();
     final result = await db.query(
@@ -40,7 +40,7 @@ class SupplyOrderDatabase {
     return result.map((e) => SupplyOrder.fromMap(e)).toList();
   }
 
-  /// 승인 + 재고 반영 (트랜잭션) - SMain에서 사용 중
+  // 승인 + 재고 반영
   Future<int> approveOrderAndAddStock({
     required int oseq,
     required int gseq,

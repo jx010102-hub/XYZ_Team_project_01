@@ -1,4 +1,4 @@
-// lib/vm/database/example_data.dart 파일 전체 코드 (employee 테이블 ename 오류 수정)
+// lib/vm/database/example_data.dart
 
 import 'package:sqflite/sqflite.dart';
 import 'package:xyz_project_01/model/employee.dart';
@@ -8,7 +8,7 @@ class ExampleData {
   
   final handler = DatabaseHandler(); 
 
-  // 1. 고객 (customer) 예시 데이터 (기존 내용 유지)
+  // 1. 고객 (customer) 예시 데이터
   static final List<Map<String, dynamic>> customers = [
     // { 'cemail': 'user1@example.com', 'cpw': '1234', ... },
     {
@@ -20,13 +20,13 @@ class ExampleData {
     }
   ];
 
-  // 2. 상품 (goods) 예시 데이터 (기존 내용 유지)
+  // 2. 상품 (goods) 예시 데이터
   static final List<Map<String, dynamic>> goods = _generateGoodsData();
 
-  // ⭐️ 3. 지점 (branch) 예시 데이터 (bid만 삽입) ⭐️
+  // 3. 지점 (branch) 예시 데이터 (bid만 삽입)
   static final List<Map<String, dynamic>> branches = _getBranchInitialDataForDB();
 
-  // ⭐️ 4. 직원 (employee) 예시 데이터 (자동 생성 함수 사용) ⭐️
+  // 4. 직원 (employee) 예시 데이터 (자동 생성 함수 사용)
   static final List<Map<String, dynamic>> employees = _generateEmployeeData();
   
   // 5. 공급업체 (supplier) 예시 데이터
@@ -65,7 +65,7 @@ class ExampleData {
     },
   ];
 
-  // (purchase, refund, approval, orders 데이터는 일단 비워둡니다.)
+  // 
   static final List<Map<String, dynamic>> purchases = [];
   static final List<Map<String, dynamic>> refunds = [];
   static final List<Map<String, dynamic>> approvals = [];
@@ -119,21 +119,19 @@ class ExampleData {
   }
 
 
-  // ⭐️⭐️⭐️ 헬퍼 함수 2: 직원 데이터 (Employee) 자동 생성 ⭐️⭐️⭐️
+  // 헬퍼 함수 2: 직원 데이터 (Employee) 자동 생성
   static List<Map<String, dynamic>> _generateEmployeeData() {
     final List<Map<String, dynamic>> list = [];
     const String defaultPw = '1111';
     const String emailDomain = '@xyz.co.kr';
     
-    // ------------------------------------------
     // 1. 본사 직원 (Workplace: 1) - 총 5명
-    // ------------------------------------------
     
     // 1-1. 시스템 관리자 (임원)
     list.add({
       'eemail': 'admin$emailDomain',
       'epw': defaultPw,
-      // 'ename': '시스템관리자(본사)', // DB 삽입용 리스트에서는 제거 (ename 없음 가정)
+      // 'ename': '시스템관리자(본사)', // DB 삽입용 리스트에서는 제거
       'ephone': '010-0000-0001',
       'erank': 4, 
       'erole': 5, 
@@ -194,9 +192,8 @@ class ExampleData {
       'ebid': null,
     });
 
-    // ------------------------------------------
     // 2. 대리점 직원 (Workplace: 2) - 총 58명 (29개 지점 * 2명)
-    // ------------------------------------------
+
     
     final branches = _getBranchInitialData();
     for (var branch in branches) {
@@ -234,7 +231,7 @@ class ExampleData {
     return list;
   }
   
-  // 상품 옵션 생성 함수 (기존 유지) 
+  // 상품 옵션 생성 함수
   static List<Map<String, dynamic>> _generateGoodsData() {
     final List<Map<String, dynamic>> list = [];
     const int gSumAmount = 100; 
@@ -309,7 +306,7 @@ class ExampleData {
     return list;
   }
 
-  // 이메일 중복 체크 (기존 유지)
+  // 이메일 중복 체크
   Future<int> idCheck(String id) async {
     final db = await handler.initializeDB();
     var result = await db.rawQuery(
@@ -323,7 +320,7 @@ class ExampleData {
     return Sqflite.firstIntValue(result) ?? 0;
   }
 
-  // 로그인 (기존 유지)
+  // 로그인
   Future<bool> loginCheck(String id, String pw) async {
     final Database db = await handler.initializeDB();
     final List<Map<String, dynamic>> result = await db.rawQuery(
@@ -336,11 +333,10 @@ class ExampleData {
     return result.isNotEmpty;
   }
 
-  // ⭐️ 입력 (insertEmployee) 수정 부분 ⭐️
+  // 입력
   Future<int> insertEmployee(Employee employee) async{
     int result = 0;
     final Database db = await handler.initializeDB();
-    // 'ename' 컬럼을 쿼리 목록과 값 목록에서 모두 제거합니다.
     result = await db.rawInsert(
       """
         insert into employee
@@ -353,12 +349,10 @@ class ExampleData {
     return result;
   }
 
-  // 수정 (기존 유지)
+  // 수정
   Future<int> updateEmployee(Employee employee) async{
     int result = 0;
     final Database db = await handler.initializeDB();
-    // 이 쿼리 역시 'ename' 컬럼을 사용하지 않도록 수정해야 할 수 있습니다. 
-    // 하지만 현재 오류는 insert이므로 일단 유지합니다.
     result = await db.rawUpdate(
       """
       update employee
@@ -370,7 +364,7 @@ class ExampleData {
     return result;
   }
 
-  // 삭제 (기존 유지)
+  // 삭제
   Future<void> deleteEmployee(int eseq) async{
     final Database db = await handler.initializeDB();
     await db.rawUpdate(

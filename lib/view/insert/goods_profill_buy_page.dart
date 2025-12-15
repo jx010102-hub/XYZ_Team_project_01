@@ -12,12 +12,9 @@ import 'package:xyz_project_01/vm/database/purchase_database.dart';
 import 'package:xyz_project_01/vm/database/refund_database.dart';
 import 'package:xyz_project_01/vm/database/goods_database.dart';
 
-// ✅ 반품요청 페이지 import
 import 'package:xyz_project_01/view/insert/refund_request_page.dart';
 
-// ===============================
 // UI용 상세 모델
-// ===============================
 class OrderDetail {
   final Purchase purchase;
   final Goods? goods;
@@ -33,9 +30,7 @@ class RefundDetail {
 
 enum OrderView { purchase, refund }
 
-// ===============================
-// ✅ ListView용 Row 모델
-// ===============================
+// ListView용 Row 모델
 enum _RowType { header, order, refund }
 
 class _ListRow {
@@ -104,9 +99,7 @@ class _GoodsProfillBuyPageState extends State<GoodsProfillBuyPage> {
     _loadAll();
   }
 
-  // ===============================
   // 공용 유틸
-  // ===============================
   void _info(String t, String m) => _message.info(t, m);
   void _success(String t, String m) => _message.success(t, m);
   void _error(String t, String m) => _message.error(t, m);
@@ -149,9 +142,7 @@ class _GoodsProfillBuyPageState extends State<GoodsProfillBuyPage> {
     return '색상: $c, 사이즈: $s';
   }
 
-  // ===============================
   // 데이터 로드
-  // ===============================
   Future<void> _loadAll() async {
     if (!mounted) return;
     setState(() => _isLoading = true);
@@ -203,9 +194,7 @@ class _GoodsProfillBuyPageState extends State<GoodsProfillBuyPage> {
     setState(() => _refundDetails = details);
   }
 
-  // ===============================
-  // ✅ 반품 요청 페이지 열기
-  // ===============================
+  // 반품 요청 페이지 열기
   Future<void> _goRefundRequestPage(OrderDetail detail) async {
     final p = detail.purchase;
     if (p.pseq == null || p.pstatus != 4) {
@@ -231,9 +220,7 @@ class _GoodsProfillBuyPageState extends State<GoodsProfillBuyPage> {
     }
   }
 
-  // ===============================
   // 액션
-  // ===============================
   Future<void> _markAsReceived(OrderDetail detail) async {
     final pseq = detail.purchase.pseq;
     if (pseq == null) return;
@@ -251,7 +238,7 @@ class _GoodsProfillBuyPageState extends State<GoodsProfillBuyPage> {
     }
   }
 
-  /// ✅ 반품 완료 + 재고복원
+  // 반품 완료 + 재고복원
   Future<void> _completeRefundAndRestore(RefundDetail detail) async {
     final rseq = detail.refund.rseq;
     final p = detail.purchase;
@@ -291,8 +278,6 @@ class _GoodsProfillBuyPageState extends State<GoodsProfillBuyPage> {
                         child: const Text('취소', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black)),
                       ),
                     ),
-
-                    // ✅ (간격용 SizedBox -> Padding) + Expanded 규칙 유지
                     Expanded(
                       child: Padding(
                         padding: const EdgeInsets.only(left: 10),
@@ -336,9 +321,7 @@ class _GoodsProfillBuyPageState extends State<GoodsProfillBuyPage> {
     );
   }
 
-  // ===============================
-  // 화면
-  // ===============================
+  // Build
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -543,7 +526,7 @@ class _GoodsProfillBuyPageState extends State<GoodsProfillBuyPage> {
     );
   }
 
-  // 카드 UI 이하(네 코드 그대로)
+  // 카드 UI 이하
   Widget _buildOrderItemCard(OrderDetail detail) {
     final p = detail.purchase;
     final g = detail.goods;

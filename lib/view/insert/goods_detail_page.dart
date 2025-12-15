@@ -41,7 +41,6 @@ class _GoodsDetailPageState extends State<GoodsDetailPage> {
 
   List<Uint8List> _displayImages = [];
 
-  // ✅ 핵심: 옵션에 맞는 실제 variant goods
   Goods? _selectedVariant;
 
   @override
@@ -50,9 +49,7 @@ class _GoodsDetailPageState extends State<GoodsDetailPage> {
     _loadOptionsData();
   }
 
-  // -------------------------
   // Data Load
-  // -------------------------
   Future<void> _loadOptionsData() async {
     try {
       final goodsDB = GoodsDatabase();
@@ -89,13 +86,13 @@ class _GoodsDetailPageState extends State<GoodsDetailPage> {
         _isLoadingOptions = false;
       });
 
-      // ✅ 기본 옵션으로 variant 확정
+      // 기본 옵션으로 variant 확정
       await _syncSelectedVariant();
 
-      debugPrint("✅ [Detail] ${widget.goods.gname} 옵션 로드 완료");
-      debugPrint("✅ [Detail] size=${_availableSizes.length}, color=${_availableColorMap.length}");
+      debugPrint("[Detail] ${widget.goods.gname} 옵션 로드 완료");
+      debugPrint("[Detail] size=${_availableSizes.length}, color=${_availableColorMap.length}");
     } catch (e) {
-      debugPrint('❌ [Detail] 옵션 로드 에러: $e');
+      debugPrint('[Detail] 옵션 로드 에러: $e');
       if (!mounted) return;
       setState(() => _isLoadingOptions = false);
       message.error('오류', '옵션 정보를 불러오지 못했습니다.');
@@ -132,7 +129,7 @@ class _GoodsDetailPageState extends State<GoodsDetailPage> {
     }
   }
 
-  // ✅ 옵션(사이즈/색상) 선택이 바뀔 때마다 variant를 DB에서 확정
+  // 옵션(사이즈/색상) 선택이 바뀔 때마다 variant를 DB에서 확정
   Future<void> _syncSelectedVariant() async {
     if (_selectedSize == null || _selectedColor == null) return;
 
@@ -156,7 +153,6 @@ class _GoodsDetailPageState extends State<GoodsDetailPage> {
       }
     } catch (e) {
       debugPrint('❌ [Detail] variant 조회 에러: $e');
-      // UI는 유지, 메시지만
       message.error('오류', '선택 옵션 상품을 찾지 못했습니다.');
     }
   }
@@ -199,8 +195,10 @@ class _GoodsDetailPageState extends State<GoodsDetailPage> {
           children: [
             _buildProductImageSection(),
             _buildPriceAndNameSection(),
-
-            const Padding(padding: EdgeInsets.only(bottom: 100)),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 100),
+              child: Container(),
+            ),
           ],
         ),
       ),
@@ -208,9 +206,7 @@ class _GoodsDetailPageState extends State<GoodsDetailPage> {
     );
   }
 
-  // -------------------------
-  // UI
-  // -------------------------
+  // Build
   Widget _buildProductImageSection() {
     return SizedBox(
       height: 400,
@@ -240,7 +236,6 @@ class _GoodsDetailPageState extends State<GoodsDetailPage> {
               );
             },
           ),
-
           Positioned(
             bottom: 20,
             right: 20,
@@ -257,30 +252,31 @@ class _GoodsDetailPageState extends State<GoodsDetailPage> {
                   ),
                   child: const Icon(Icons.thumb_up_alt_outlined, color: Colors.black),
                 ),
-                const Padding(padding: EdgeInsets.only(left: 10)),
-                GestureDetector(
-                  onTap: () {
-                    Get.to(() => GoodsInfoPage(goods: widget.goods));
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: const [
-                        BoxShadow(color: Colors.black12, blurRadius: 5),
-                      ],
-                    ),
-                    child: const Text(
-                      '제품상세 >',
-                      style: TextStyle(fontWeight: FontWeight.bold),
+                Padding(
+                  padding: const EdgeInsets.only(left: 10),
+                  child: GestureDetector(
+                    onTap: () {
+                      Get.to(() => GoodsInfoPage(goods: widget.goods));
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: const [
+                          BoxShadow(color: Colors.black12, blurRadius: 5),
+                        ],
+                      ),
+                      child: const Text(
+                        '제품상세 >',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
                     ),
                   ),
                 ),
               ],
             ),
           ),
-
           Positioned(
             bottom: 70,
             child: Row(
@@ -296,7 +292,6 @@ class _GoodsDetailPageState extends State<GoodsDetailPage> {
   }
 
   Widget _buildPriceAndNameSection() {
-    // ✅ 가격 표시도 가능하면 variant 기준으로 보여주기(없으면 대표 goods)
     final shownPrice = _selectedVariant?.price ?? widget.goods.price;
 
     return Padding(
@@ -307,33 +302,45 @@ class _GoodsDetailPageState extends State<GoodsDetailPage> {
           Row(
             children: [
               _buildTag('주간전체 1위'),
-              const Padding(padding: EdgeInsets.only(left: 8)),
-              _buildTag('Top 100. ${widget.goods.gcategory}'),
+              Padding(
+                padding: const EdgeInsets.only(left: 8),
+                child: _buildTag('Top 100. ${widget.goods.gcategory}'),
+              ),
             ],
           ),
-          const Padding(padding: EdgeInsets.only(top: 15)),
-          Text(
-            '${NumberFormat('#,###').format(shownPrice.round())}원',
-            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          Padding(
+            padding: const EdgeInsets.only(top: 15),
+            child: Text(
+              '${NumberFormat('#,###').format(shownPrice.round())}원',
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
           ),
-          const Padding(padding: EdgeInsets.only(top: 10)),
-          Text(
-            widget.goods.gname,
-            style: const TextStyle(fontSize: 16, color: Colors.black),
+          Padding(
+            padding: const EdgeInsets.only(top: 10),
+            child: Text(
+              widget.goods.gname,
+              style: const TextStyle(fontSize: 16, color: Colors.black),
+            ),
           ),
-          const Padding(padding: EdgeInsets.only(top: 5)),
-          Text(
-            widget.goods.gengname,
-            style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+          Padding(
+            padding: const EdgeInsets.only(top: 5),
+            child: Text(
+              widget.goods.gengname,
+              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+            ),
           ),
-          const Padding(padding: EdgeInsets.only(top: 15)),
-          Row(
-            children: [
-              const Icon(Icons.star, color: Colors.amber, size: 16),
-              const Padding(padding: EdgeInsets.only(left: 5)),
-              const Text('4.0', style: TextStyle(fontWeight: FontWeight.bold)),
-              Text(' (리뷰 2,000)', style: TextStyle(color: Colors.grey[600])),
-            ],
+          Padding(
+            padding: const EdgeInsets.only(top: 15),
+            child: Row(
+              children: [
+                const Icon(Icons.star, color: Colors.amber, size: 16),
+                Padding(
+                  padding: const EdgeInsets.only(left: 5),
+                  child: const Text('4.0', style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+                Text(' (리뷰 2,000)', style: TextStyle(color: Colors.grey[600])),
+              ],
+            ),
           ),
         ],
       ),
@@ -385,18 +392,20 @@ class _GoodsDetailPageState extends State<GoodsDetailPage> {
             ),
             child: const Icon(Icons.thumb_up_alt_outlined, color: Colors.grey),
           ),
-          const Padding(padding: EdgeInsets.only(left: 15)),
           Expanded(
-            child: ElevatedButton(
-              onPressed: () => _showPurchaseOptions(context),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                minimumSize: const Size(double.infinity, 50),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-              child: const Text(
-                '구매하기',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+            child: Padding(
+              padding: const EdgeInsets.only(left: 15),
+              child: ElevatedButton(
+                onPressed: () => _showPurchaseOptions(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  minimumSize: const Size(double.infinity, 50),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                child: const Text(
+                  '구매하기',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                ),
               ),
             ),
           ),
@@ -405,9 +414,7 @@ class _GoodsDetailPageState extends State<GoodsDetailPage> {
     );
   }
 
-  // -------------------------
   // BottomSheet
-  // -------------------------
   void _showPurchaseOptions(BuildContext context) {
     if (_availableSizes.isEmpty || _availableColorMap.isEmpty) {
       message.error('옵션 로드 실패', '상품 옵션 데이터를 로드하지 못했습니다.');
@@ -448,33 +455,32 @@ class _GoodsDetailPageState extends State<GoodsDetailPage> {
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
                   const Divider(height: 30),
-
                   _buildOptionProductInfo(widget.goods),
                   const Divider(height: 30),
-
                   const Text('사이즈', style: TextStyle(fontWeight: FontWeight.bold)),
-                  const Padding(padding: EdgeInsets.only(top: 10)),
-                  SizedBox(
-                    height: 80,
-                    child: SingleChildScrollView(
-                      child: _buildSizeOptions(setModalState),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 10),
+                    child: SizedBox(
+                      height: 80,
+                      child: SingleChildScrollView(
+                        child: _buildSizeOptions(setModalState),
+                      ),
                     ),
                   ),
-
                   const Divider(height: 30),
-
                   const Text('색깔', style: TextStyle(fontWeight: FontWeight.bold)),
-                  const Padding(padding: EdgeInsets.only(top: 10)),
-                  _buildColorOptions(setModalState),
-
+                  Padding(
+                    padding: const EdgeInsets.only(top: 10),
+                    child: _buildColorOptions(setModalState),
+                  ),
                   if (_selectedSize != null && _selectedColor != null)
                     _buildQuantitySelector(setModalState),
-
                   const Spacer(),
-
                   _buildOptionBottomBar(context),
-
-                  Padding(padding: EdgeInsets.only(bottom: bottomPadding)),
+                  Padding(
+                    padding: EdgeInsets.only(bottom: bottomPadding),
+                    child: Container(),
+                  ),
                 ],
               ),
             );
@@ -501,13 +507,15 @@ class _GoodsDetailPageState extends State<GoodsDetailPage> {
                 )
               : const Icon(Icons.image, color: Colors.grey),
         ),
-        const Padding(padding: EdgeInsets.only(left: 10)),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(goods.gname, style: const TextStyle(fontWeight: FontWeight.bold)),
-            Text(goods.gengname, style: const TextStyle(color: Colors.grey, fontSize: 12)),
-          ],
+        Padding(
+          padding: const EdgeInsets.only(left: 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(goods.gname, style: const TextStyle(fontWeight: FontWeight.bold)),
+              Text(goods.gengname, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+            ],
+          ),
         ),
       ],
     );
@@ -578,12 +586,14 @@ class _GoodsDetailPageState extends State<GoodsDetailPage> {
                 child: isSelected ? Icon(Icons.check, color: checkColor) : null,
               ),
             ),
-            const Padding(padding: EdgeInsets.only(top: 5)),
-            Text(
-              colorName,
-              style: TextStyle(
-                fontSize: 12,
-                color: isSelected ? Colors.black : Colors.grey,
+            Padding(
+              padding: const EdgeInsets.only(top: 5),
+              child: Text(
+                colorName,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: isSelected ? Colors.black : Colors.grey,
+                ),
               ),
             ),
           ],
@@ -652,7 +662,7 @@ class _GoodsDetailPageState extends State<GoodsDetailPage> {
                 return;
               }
 
-              // ✅ variant 없으면 막기
+              // variant 없으면 막기
               if (_selectedVariant == null) {
                 message.error('오류', '선택한 옵션의 상품을 찾을 수 없습니다.');
                 return;
@@ -697,45 +707,47 @@ class _GoodsDetailPageState extends State<GoodsDetailPage> {
             ),
           ),
         ),
-        const Padding(padding: EdgeInsets.only(left: 10)),
         Expanded(
-          child: ElevatedButton(
-            onPressed: () async {
-              if (_selectedSize == null || _selectedColor == null) {
-                message.warning('옵션 선택', '사이즈와 색상을 모두 선택해 주세요.');
-                return;
-              }
+          child: Padding(
+            padding: const EdgeInsets.only(left: 10),
+            child: ElevatedButton(
+              onPressed: () async {
+                if (_selectedSize == null || _selectedColor == null) {
+                  message.warning('옵션 선택', '사이즈와 색상을 모두 선택해 주세요.');
+                  return;
+                }
 
-              // ✅ variant 없으면 막기
-              if (_selectedVariant == null) {
-                message.error('오류', '선택한 옵션의 상품을 찾을 수 없습니다.');
-                return;
-              }
+                // variant 없으면 막기
+                if (_selectedVariant == null) {
+                  message.error('오류', '선택한 옵션의 상품을 찾을 수 없습니다.');
+                  return;
+                }
 
-              Navigator.pop(context);
+                Navigator.pop(context);
 
-              // ✅ PayPage에는 대표 goods가 아니라 variant 전달
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => PayPage(
-                    goods: _selectedVariant!, // <- 여기 핵심
-                    selectedSize: _selectedSize!,
-                    selectedColor: _selectedColor!,
-                    quantity: _purchaseQuantity,
-                    userid: widget.userid,
+                // PayPage에는 대표 goods가 아니라 variant 전달
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => PayPage(
+                      goods: _selectedVariant!,
+                      selectedSize: _selectedSize!,
+                      selectedColor: _selectedColor!,
+                      quantity: _purchaseQuantity,
+                      userid: widget.userid,
+                    ),
                   ),
-                ),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              minimumSize: const Size(double.infinity, 50),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-            child: const Text(
-              '바로 구매하기',
-              style: TextStyle(color: Colors.white, fontSize: 16),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                minimumSize: const Size(double.infinity, 50),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: const Text(
+                '바로 구매하기',
+                style: TextStyle(color: Colors.white, fontSize: 16),
+              ),
             ),
           ),
         ),

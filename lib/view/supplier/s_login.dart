@@ -18,8 +18,6 @@ class _SLoginState extends State<SLogin> {
 
   final Message message = Message();
 
-  // ✅ 미사용/더미 정리: i, imageTapCount 제거
-
   @override
   void initState() {
     super.initState();
@@ -90,7 +88,7 @@ class _SLoginState extends State<SLogin> {
     final id = idController.text.trim();
     final name = nameController.text.trim();
 
-    // ✅ 입력값 체크 (기능 동일)
+    // 입력값 체크
     if (id.isEmpty || name.isEmpty) {
       message.error('오류', '제조사 아이디와 이름이 올바르지 않습니다.');
       return;

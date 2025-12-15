@@ -22,7 +22,7 @@ class _ELoginState extends State<ELogin> {
 
   late final EmployeeDatabase employee;
 
-  late bool i; // 로그인 체크(기존 변수 유지)
+  late bool i;
 
   final Message message = const Message();
 
@@ -104,7 +104,7 @@ class _ELoginState extends State<ELogin> {
                         child: const Text('회원가입'),
                       ),
                       SizedBox(
-                        height: 20, // 높이 제어(간격용 아님) → 유지
+                        height: 20,
                         child: VerticalDivider(
                           color: Colors.grey,
                           thickness: 2,
@@ -115,7 +115,7 @@ class _ELoginState extends State<ELogin> {
                         child: const Text('이메일 찾기'),
                       ),
                       SizedBox(
-                        height: 20, // 높이 제어(간격용 아님) → 유지
+                        height: 20,
                         child: VerticalDivider(
                           color: Colors.grey,
                           thickness: 2,

@@ -117,8 +117,7 @@ class _AMainState extends State<AMain> {
   }
 }
 
-/// 버튼 눌림 상태(색상 변화)를 위한 StatefulWidget
-/// - 기존 동작 유지: onTapDown 때 눌림 표시, onTapUp 때 해제 + 이동 실행
+// 버튼 눌림 상태
 class _PressableAdminButton extends StatefulWidget {
   final String text;
   final VoidCallback onTap;

@@ -5,17 +5,14 @@ import 'package:xyz_project_01/vm/database/database_handler.dart';
 class BranchDatabase {
   final handler = DatabaseHandler();
 
-  // -----------------------------------------------------------------
-  // ⭐️ 최초 1회만 데이터 삽입하는 로직으로 변경
-  // -----------------------------------------------------------------
   Future<void> initializeBranchesIfEmpty(List<Branch> branches) async {
     final Database db = await handler.initializeDB();
     
-    // 1. 현재 'branch' 테이블에 데이터 개수 확인
+    // 현재 'branch' 테이블에 데이터 개수 확인
     final countResult = await db.rawQuery('SELECT COUNT(*) FROM branch');
     final count = Sqflite.firstIntValue(countResult) ?? 0;
     
-    // 2. 데이터가 0개일 경우에만 삽입 진행
+    // 데이터가 0개일 경우에만 삽입 진행
     if (count == 0) {
       await db.transaction((txn) async {
         for (var branch in branches) {
@@ -30,9 +27,9 @@ class BranchDatabase {
           );
         }
       });
-      print('✅ DB의 branch 테이블에 ${branches.length}개의 매장 데이터가 초기 등록되었습니다.');
+      print('DB의 branch 테이블에 ${branches.length}개의 매장 데이터가 초기 등록되었습니다.');
     } else {
-      print('ℹ️ DB의 branch 테이블에 이미 데이터가 존재하여 초기 등록을 건너뜁니다 (현재 $count개).');
+      print('DB의 branch 테이블에 이미 데이터가 존재하여 초기 등록을 건너뜁니다 (현재 $count개).');
     }
   }
 

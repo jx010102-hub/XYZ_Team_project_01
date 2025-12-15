@@ -84,8 +84,6 @@ class _CRegistState extends State<CRegist> {
                     labelText: '이메일 주소',
                   ),
                 ),
-
-                // (간격용 SizedBox 대신 Padding 유지)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 30),
                   child: ElevatedButton(

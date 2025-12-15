@@ -9,7 +9,7 @@ import 'package:xyz_project_01/vm/database/branch_database.dart';
 
 class GMap extends StatefulWidget {
   final String userid;
-  final bool popOnSelect; // ✅ PayPage에서 선택 후 결과를 돌려줄 때 사용
+  final bool popOnSelect; // PayPage에서 선택 후 결과를 돌려줄 때 사용
 
   const GMap({
     super.key,
@@ -22,7 +22,7 @@ class GMap extends StatefulWidget {
 }
 
 class _GMapState extends State<GMap> {
-  // --- 컨트롤러 및 상태 변수 ---
+  // Property
   final LatLng gangnamStation = const LatLng(37.4981, 127.0276);
   final Distance distance = const Distance();
 
@@ -43,7 +43,7 @@ class _GMapState extends State<GMap> {
   // 화면에 표시할 매장 목록
   List<Map<String, dynamic>> allStores = [];
 
-  // --- 기타 데이터 정의 ---
+  // Data
   final List<String> seoulDistricts = const [
     '강남구',
     '강동구',
@@ -114,9 +114,7 @@ class _GMapState extends State<GMap> {
     super.dispose();
   }
 
-  // -------------------------------------------------------------
   // DB 초기화 + 더미 데이터 삽입 + 화면 로드
-  // -------------------------------------------------------------
   Future<void> _initDatabaseAndLoadStores() async {
     final initialData = <Map<String, dynamic>>[
       {'bid': 1, 'name': '강남로데오점(XYZ 슈퍼)', 'district': '강남구', 'address': '서울특별시 강남구 논현로102길 3', 'image': 'images/xyz_logo.png', 'lat': 37.5255, 'lng': 127.0396},
@@ -167,9 +165,7 @@ class _GMapState extends State<GMap> {
     setState(() => allStores = initialData);
   }
 
-  // -------------------------------------------------------------
-  // 유틸
-  // -------------------------------------------------------------
+  // Util
   int _calculateDistanceInMeters(double lat, double lng) {
     final storeLocation = LatLng(lat, lng);
     return distance(gangnamStation, storeLocation).round();
@@ -184,7 +180,7 @@ class _GMapState extends State<GMap> {
   void _onSearchChanged() {
     setState(() => _currentSearchQuery = _searchController.text.toLowerCase());
 
-    // 지도 탭에서 검색 시, 첫 매장 기준으로 지도 이동(기존 로직 유지)
+    // 지도 탭에서 검색 시, 첫 매장 기준으로 지도 이동
     if (_currentTab == 1) {
       final filteredStores = _getFilteredStores();
       if (filteredStores.isNotEmpty) {
@@ -240,10 +236,12 @@ class _GMapState extends State<GMap> {
                 Text(
                   '${store['name']} (${store['district']})을(를) 선택하시겠습니까?',
                 ),
-                const Padding(padding: EdgeInsets.only(top: 10)),
-                Text(
-                  '상세 주소: ${store['address']}',
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                Padding(
+                  padding: const EdgeInsets.only(top: 10),
+                  child: Text(
+                    '상세 주소: ${store['address']}',
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
                 ),
               ],
             ),
@@ -255,12 +253,8 @@ class _GMapState extends State<GMap> {
             ),
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop(); // 다이얼로그 닫기
-
-                // 1) 전역 컨트롤러 저장
+                Navigator.of(context).pop();
                 storeController.setStore(store);
-
-                // 2) PayPage에서 호출된 경우 결과 반환
                 if (widget.popOnSelect) {
                   Get.back(result: store);
                   return;
@@ -279,9 +273,7 @@ class _GMapState extends State<GMap> {
     );
   }
 
-  // -------------------------------------------------------------
-  // UI
-  // -------------------------------------------------------------
+  // Build
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -326,10 +318,12 @@ class _GMapState extends State<GMap> {
               borderRadius: BorderRadius.circular(2),
             ),
           ),
-          const Padding(padding: EdgeInsets.only(top: 10)),
-          const Text(
-            '매장선택',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          Padding(
+            padding: const EdgeInsets.only(top: 10),
+            child: const Text(
+              '매장선택',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
           ),
         ],
       ),
@@ -432,27 +426,35 @@ class _GMapState extends State<GMap> {
               '지역 선택',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
-            const Padding(padding: EdgeInsets.only(top: 10)),
-            _buildDistrictDropdown(),
-            const Padding(padding: EdgeInsets.only(top: 20)),
-            const Text(
-              '가까운 매장 (거리순 정렬 / 기준: 강남역)',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            Padding(
+              padding: const EdgeInsets.only(top: 10),
+              child: _buildDistrictDropdown(),
             ),
-            const Padding(padding: EdgeInsets.only(top: 15)),
-            ...filteredStores.map((store) {
-              final meter = _calculateDistanceInMeters(
-                store['lat'] as double,
-                store['lng'] as double,
-              );
-              return _buildStoreCard(
-                store: store,
-                name: store['name'] as String,
-                address: store['district'] as String,
-                distance: _formatDistance(meter),
-                imagePath: store['image'] as String,
-              );
-            }),
+            Padding(
+              padding: const EdgeInsets.only(top: 20),
+              child: const Text(
+                '가까운 매장 (거리순 정렬 / 기준: 강남역)',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(top: 15),
+              child: Column(
+                children: filteredStores.map((store) {
+                  final meter = _calculateDistanceInMeters(
+                    store['lat'] as double,
+                    store['lng'] as double,
+                  );
+                  return _buildStoreCard(
+                    store: store,
+                    name: store['name'] as String,
+                    address: store['district'] as String,
+                    distance: _formatDistance(meter),
+                    imagePath: store['image'] as String,
+                  );
+                }).toList(),
+              ),
+            ),
           ],
         ),
       ),
@@ -481,7 +483,7 @@ class _GMapState extends State<GMap> {
               _currentSearchQuery = '';
             });
 
-            // 지도 탭에서 구 변경 시 중심 이동(기존 유지)
+            // 지도 탭에서 구 변경 시 중심 이동
             if (_currentTab == 1) {
               if (newValue != null && newValue != '전체') {
                 final center = seoulDistrictCenters[newValue];
@@ -526,10 +528,12 @@ class _GMapState extends State<GMap> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(address, style: const TextStyle(color: Colors.grey)),
-              const Padding(padding: EdgeInsets.only(top: 5)),
-              Text(
-                distance,
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              Padding(
+                padding: const EdgeInsets.only(top: 5),
+                child: Text(
+                  distance,
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                ),
               ),
             ],
           ),
@@ -597,8 +601,7 @@ class _GMapState extends State<GMap> {
     );
   }
 
-  // ✅ 하단 선택 매장 바 (레이아웃 자리 확보는 SizedBox 유지)
-// ✅ 하단 선택 매장 바 (레이아웃 자리 확보는 SizedBox 유지)
+  // 하단 선택 매장 바
   Widget _buildSelectedStoreBar() {
     return Obx(() {
       final store = storeController.selectedStore.value;
@@ -626,10 +629,7 @@ class _GMapState extends State<GMap> {
                 ),
               ),
             ),
-
-            // 중앙 FloatingActionButton 공간 확보용(기능/레이아웃 유지)
             const SizedBox(width: 70),
-
             const Expanded(child: SizedBox()),
           ],
         ),
@@ -638,9 +638,7 @@ class _GMapState extends State<GMap> {
   }
 }
 
-// -----------------------------------
-// 탭 버튼(정리용)
-// -----------------------------------
+// 탭 버튼
 class _TabButton extends StatelessWidget {
   final String label;
   final bool isActive;

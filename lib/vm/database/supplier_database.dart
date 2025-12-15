@@ -13,7 +13,6 @@ class SupplierDatabase {
   }
 
   // 로그인
-  // ✅ supplier.sid가 INTEGER 이므로 id를 int로 파싱 시도 (실패 시 false)
   Future<bool> loginCheck(String id, String name) async {
     final Database db = await handler.initializeDB();
 
@@ -51,7 +50,7 @@ class SupplierDatabase {
       SET sname = ?
       WHERE sid = ?
       ''',
-      [supplier.sname, supplier.sid], // ✅ 누락된 sid 추가 (에러 방지)
+      [supplier.sname, supplier.sid],
     );
   }
 
