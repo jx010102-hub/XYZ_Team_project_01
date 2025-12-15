@@ -87,13 +87,19 @@ class _PayPageMultiState extends State<PayPageMulti> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildReceivingStoreSelection(store),
-              const SizedBox(height: 24),
-              _buildItemsSummary(),
-              const SizedBox(height: 24),
-              _buildPaymentMethod(),
-              const SizedBox(height: 24),
-              _buildOrderSummary(),
-              const SizedBox(height: 110),
+              Padding(
+                padding: const EdgeInsets.only(top: 24),
+                child: _buildItemsSummary(),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(top: 24),
+                child: _buildPaymentMethod(),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(top: 24),
+                child: _buildOrderSummary(),
+              ),
+              const Padding(padding: EdgeInsets.only(top: 110)),
             ],
           ),
         ),
@@ -102,44 +108,47 @@ class _PayPageMultiState extends State<PayPageMulti> {
     );
   }
 
-  // ---------------------------
-  // UI
-  // ---------------------------
 
   Widget _buildReceivingStoreSelection(dynamic store) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text('수령매장 선택', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 10),
-        if (store != null) ...[
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(12),
-            margin: const EdgeInsets.only(bottom: 10),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade100,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.grey.shade300),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(store['name'] as String, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 4),
-                Text(
-                  '${store['district']} · ${store['address']}',
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+        Padding(
+          padding: const EdgeInsets.only(top: 10),
+          child: (store != null)
+              ? Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  margin: const EdgeInsets.only(bottom: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        store['name'] as String,
+                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          '${store['district']} · ${store['address']}',
+                          style: const TextStyle(fontSize: 12, color: Colors.grey),
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              : const Padding(
+                  padding: EdgeInsets.only(bottom: 8),
+                  child: Text('수령할 매장을 선택해 주세요.', style: TextStyle(fontSize: 13, color: Colors.grey)),
                 ),
-              ],
-            ),
-          ),
-        ] else ...[
-          const Padding(
-            padding: EdgeInsets.only(bottom: 8),
-            child: Text('수령할 매장을 선택해 주세요.', style: TextStyle(fontSize: 13, color: Colors.grey)),
-          ),
-        ],
+        ),
+
         ElevatedButton(
           onPressed: () => Get.to(() => GMap(userid: widget.userid)),
           style: ElevatedButton.styleFrom(
@@ -151,10 +160,12 @@ class _PayPageMultiState extends State<PayPageMulti> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const Icon(Icons.location_on, color: Colors.white),
-              const SizedBox(width: 8),
-              Text(
-                store == null ? '제품을 받을 매장을 선택하세요' : '수령 매장 변경하기',
-                style: const TextStyle(color: Colors.white, fontSize: 16),
+              Padding(
+                padding: const EdgeInsets.only(left: 8),
+                child: Text(
+                  store == null ? '제품을 받을 매장을 선택하세요' : '수령 매장 변경하기',
+                  style: const TextStyle(color: Colors.white, fontSize: 16),
+                ),
               ),
             ],
           ),
@@ -176,68 +187,80 @@ class _PayPageMultiState extends State<PayPageMulti> {
             Text('총 ${widget.items.length}종 · $totalQty개', style: const TextStyle(fontSize: 13, color: Colors.grey)),
           ],
         ),
-        const SizedBox(height: 12),
-        ...widget.items.map((d) {
-          final g = d.goods;
-          final price = g?.price ?? 0;
-          final sum = price * d.basket.qty;
+        Padding(
+          padding: const EdgeInsets.only(top: 12),
+          child: Column(
+            children: widget.items.map((d) {
+              final g = d.goods;
+              final price = g?.price ?? 0;
+              final sum = price * d.basket.qty;
 
-          return Container(
-            margin: const EdgeInsets.only(bottom: 10),
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade100,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 54,
-                  height: 54,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade200,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: (g?.mainimage != null)
-                      ? ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: Image.memory(g!.mainimage!, fit: BoxFit.cover),
-                        )
-                      : const Icon(Icons.image, color: Colors.grey),
+              return Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(g?.gname ?? d.basket.gname, style: const TextStyle(fontWeight: FontWeight.bold)),
-                      if ((g?.gengname ?? '').isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 2),
-                          child: Text(g!.gengname, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                        ),
-                      const SizedBox(height: 6),
-                      Text(
-                        '옵션: ${d.basket.gsize} / ${d.basket.gcolor} · 수량: ${d.basket.qty}개',
-                        style: const TextStyle(fontSize: 12, color: Colors.black54),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('금액', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                    const SizedBox(height: 4),
-                    Text(_formatCurrency(sum), style: const TextStyle(fontWeight: FontWeight.bold)),
+                    Container(
+                      width: 54,
+                      height: 54,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade200,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: (g?.mainimage != null)
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.memory(g!.mainimage!, fit: BoxFit.cover),
+                            )
+                          : const Icon(Icons.image, color: Colors.grey),
+                    ),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(g?.gname ?? d.basket.gname, style: const TextStyle(fontWeight: FontWeight.bold)),
+                            if ((g?.gengname ?? '').isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 2),
+                                child: Text(g!.gengname, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                              ),
+                            Padding(
+                              padding: const EdgeInsets.only(top: 6),
+                              child: Text(
+                                '옵션: ${d.basket.gsize} / ${d.basket.gcolor} · 수량: ${d.basket.qty}개',
+                                style: const TextStyle(fontSize: 12, color: Colors.black54),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(left: 8),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          const Text('금액', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: Text(_formatCurrency(sum), style: const TextStyle(fontWeight: FontWeight.bold)),
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
-              ],
-            ),
-          );
-        }).toList(),
+              );
+            }).toList(),
+          ),
+        ),
       ],
     );
   }
@@ -247,12 +270,18 @@ class _PayPageMultiState extends State<PayPageMulti> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text('결제 방법', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 10),
-        _buildPaymentOption(title: '간편 결제', subtitle: '', value: 0),
-        const Divider(),
-        _buildPaymentOption(title: '신용카드', subtitle: '일시불 + 할부', value: 1),
-        const Divider(),
-        _buildPaymentOption(title: '매장에서 결제', subtitle: '현금 + 카드', value: 2),
+        Padding(
+          padding: const EdgeInsets.only(top: 10),
+          child: Column(
+            children: [
+              _buildPaymentOption(title: '간편 결제', subtitle: '', value: 0),
+              const Divider(),
+              _buildPaymentOption(title: '신용카드', subtitle: '일시불 + 할부', value: 1),
+              const Divider(),
+              _buildPaymentOption(title: '매장에서 결제', subtitle: '현금 + 카드', value: 2),
+            ],
+          ),
+        ),
       ],
     );
   }
@@ -277,10 +306,14 @@ class _PayPageMultiState extends State<PayPageMulti> {
               },
               activeColor: Colors.black,
             ),
-            const SizedBox(width: 6),
-            Text(title, style: const TextStyle(fontSize: 16)),
-            const SizedBox(width: 10),
-            Text(subtitle, style: const TextStyle(fontSize: 14, color: Colors.grey)),
+            Padding(
+              padding: const EdgeInsets.only(left: 6),
+              child: Text(title, style: const TextStyle(fontSize: 16)),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(left: 10),
+              child: Text(subtitle, style: const TextStyle(fontSize: 14, color: Colors.grey)),
+            ),
           ],
         ),
       ),
@@ -292,10 +325,16 @@ class _PayPageMultiState extends State<PayPageMulti> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text('최종 주문 정보', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 15),
-        _buildSummaryRow('구매가', _formatCurrency(_subtotal)),
-        const Divider(height: 30, thickness: 1.5),
-        _buildSummaryRow('총 결제금액', _formatCurrency(_totalAmount), isTotal: true),
+        Padding(
+          padding: const EdgeInsets.only(top: 15),
+          child: Column(
+            children: [
+              _buildSummaryRow('구매가', _formatCurrency(_subtotal)),
+              const Divider(height: 30, thickness: 1.5),
+              _buildSummaryRow('총 결제금액', _formatCurrency(_totalAmount), isTotal: true),
+            ],
+          ),
+        ),
       ],
     );
   }
@@ -372,13 +411,8 @@ class _PayPageMultiState extends State<PayPageMulti> {
     );
   }
 
-  // ---------------------------
-  // 핵심 로직
-  // ---------------------------
+  // Functions ---------------------------
 
-  /// ✅ 화면은 “결제 1번”
-  /// ✅ DB에는 아이템별 purchase insert
-  /// ✅ 성공한 항목 bseq만 basket에서 자동 삭제
   Future<void> _processMultiPaymentAndSave() async {
     if (_isSubmitting) return;
 
@@ -408,7 +442,7 @@ class _PayPageMultiState extends State<PayPageMulti> {
           continue;
         }
 
-        // gseq 확정(variant 재조회)
+        // gseq 확정
         final variant = await _goodsDB.getGoodsVariant(
           gname: b.gname,
           gsize: b.gsize,
@@ -447,7 +481,7 @@ class _PayPageMultiState extends State<PayPageMulti> {
         }
       }
 
-      // ✅ 성공한 장바구니 항목만 삭제
+      // 성공한 장바구니 항목만 삭제
       if (successBseqs.isNotEmpty) {
         await _basketDB.deleteBasketByBseqList(successBseqs);
       }

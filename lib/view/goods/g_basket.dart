@@ -219,11 +219,15 @@ class _GBasketState extends State<GBasket> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text('옵션 변경', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 12),
-                  Text(gname, maxLines: 1, overflow: TextOverflow.ellipsis),
-                  const SizedBox(height: 14),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: Text(gname, maxLines: 1, overflow: TextOverflow.ellipsis),
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.only(top: 14),
+                    child: Text('사이즈', style: TextStyle(color: Colors.grey)),
+                  ),
 
-                  const Text('사이즈', style: TextStyle(color: Colors.grey)),
                   DropdownButton<String>(
                     value: tempSize,
                     isExpanded: true,
@@ -233,9 +237,11 @@ class _GBasketState extends State<GBasket> {
                       sheetSet(() => tempSize = v);
                     },
                   ),
+                  const Padding(
+                    padding: EdgeInsets.only(top: 10),
+                    child: Text('색상', style: TextStyle(color: Colors.grey)),
+                  ),
 
-                  const SizedBox(height: 10),
-                  const Text('색상', style: TextStyle(color: Colors.grey)),
                   DropdownButton<String>(
                     value: tempColor,
                     isExpanded: true,
@@ -245,38 +251,39 @@ class _GBasketState extends State<GBasket> {
                       sheetSet(() => tempColor = v);
                     },
                   ),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 14),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.black,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        onPressed: () async {
+                          try {
+                            final r = await _basketDB.updateBasketOption(
+                              bseq: bseq,
+                              gsize: tempSize,
+                              gcolor: tempColor,
+                            );
 
-                  const SizedBox(height: 14),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.black,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                      onPressed: () async {
-                        try {
-                          final r = await _basketDB.updateBasketOption(
-                            bseq: bseq,
-                            gsize: tempSize,
-                            gcolor: tempColor,
-                          );
+                            if (!mounted) return;
 
-                          if (!mounted) return;
-
-                          if (r > 0) {
-                            Navigator.pop(context);
-                            msg.success('완료', '옵션 변경 완료됨');
-                            await _loadBasket();
-                          } else {
-                            msg.error('실패', '옵션 변경 실패');
+                            if (r > 0) {
+                              Navigator.pop(context);
+                              msg.success('완료', '옵션 변경 완료됨');
+                              await _loadBasket();
+                            } else {
+                              msg.error('실패', '옵션 변경 실패');
+                            }
+                          } catch (e) {
+                            msg.error('오류', '옵션 변경 오류: $e');
                           }
-                        } catch (e) {
-                          msg.error('오류', '옵션 변경 오류: $e');
-                        }
-                      },
-                      child: const Text('적용'),
+                        },
+                        child: const Text('적용'),
+                      ),
                     ),
                   ),
                 ],
@@ -369,8 +376,10 @@ class _GBasketState extends State<GBasket> {
                       color: checked ? Colors.black : Colors.grey,
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  _thumb(goods?.mainimage),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 10),
+                    child: _thumb(goods?.mainimage),
+                  ),
                   Expanded(
                     child: Padding(
                       padding: const EdgeInsets.only(left: 15),
@@ -383,16 +392,24 @@ class _GBasketState extends State<GBasket> {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
-                          Text(goods?.gengname ?? '', style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                          const SizedBox(height: 6),
                           Text(
-                            '옵션: ${b.gsize} / ${b.gcolor}',
-                            style: const TextStyle(fontSize: 12, color: Colors.black54),
+                            goods?.gengname ?? '',
+                            style: const TextStyle(fontSize: 12, color: Colors.grey),
+                          ),
+
+                          // (기존: SizedBox(height: 6))
+                          Padding(
+                            padding: const EdgeInsets.only(top: 6),
+                            child: Text(
+                              '옵션: ${b.gsize} / ${b.gcolor}',
+                              style: const TextStyle(fontSize: 12, color: Colors.black54),
+                            ),
                           ),
                         ],
                       ),
                     ),
                   ),
+
                   GestureDetector(
                     onTap: () => _deleteItem(d),
                     child: const Icon(Icons.close, color: Colors.grey, size: 20),
@@ -431,10 +448,12 @@ class _GBasketState extends State<GBasket> {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       const Text('총 상품 금액', style: TextStyle(fontSize: 14, color: Colors.grey)),
-                      const SizedBox(height: 5),
-                      Text(
-                        _formatCurrency(sum),
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 5),
+                        child: Text(
+                          _formatCurrency(sum),
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
                       ),
                     ],
                   ),
@@ -454,15 +473,17 @@ class _GBasketState extends State<GBasket> {
                       ),
                       child: const Text('옵션변경'),
                     ),
-                    const SizedBox(width: 10),
-                    ElevatedButton(
-                      onPressed: () => _goPaySingle(d),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFE53935),
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                    Padding(
+                      padding: const EdgeInsets.only(left: 10),
+                      child: ElevatedButton(
+                        onPressed: () => _goPaySingle(d),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFE53935),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                        ),
+                        child: const Text('바로주문'),
                       ),
-                      child: const Text('바로주문'),
                     ),
                   ],
                 ),
@@ -499,7 +520,6 @@ class _GBasketState extends State<GBasket> {
       bottomSheet: Obx(() {
         final store = storeController.selectedStore.value;
 
-        // totals 최신화
         _recalcTotals();
 
         return Container(
@@ -549,25 +569,30 @@ class _GBasketState extends State<GBasket> {
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       const Icon(Icons.store, color: Colors.black87, size: 20),
-                      const SizedBox(width: 10),
                       Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              store['name'] as String,
-                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 3),
-                            Text(
-                              '${store['district']} · ${store['address']}',
-                              style: const TextStyle(fontSize: 11, color: Colors.grey),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
+                        child: Padding(
+                          padding: const EdgeInsets.only(left: 10),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                store['name'] as String,
+                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.only(top: 3),
+                                child: Text(
+                                  '${store['district']} · ${store['address']}',
+                                  style: const TextStyle(fontSize: 11, color: Colors.grey),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
+
                       TextButton(
                         onPressed: () => msg.info('안내', '매장 변경은 기존 흐름대로 GMap 연결하면 됨'),
                         child: const Text('변경', style: TextStyle(color: Colors.blue, fontSize: 12)),
