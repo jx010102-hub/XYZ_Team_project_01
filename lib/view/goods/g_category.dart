@@ -9,9 +9,8 @@ import 'package:xyz_project_01/model/goods.dart';
 import 'package:xyz_project_01/view/insert/goods_detail_page.dart';
 import 'package:xyz_project_01/vm/database/example_data.dart';
 
-// ------------------------------
-// Product 모델 (기존 유지)
-// ------------------------------
+
+  // Product 모델
 class Product {
   final String gname;
   final String gengname;
@@ -36,29 +35,36 @@ class Product {
   });
 }
 
-// ------------------------------
-// ExampleData -> Product 변환 (기존 유지)
-// ------------------------------
+  // ExampleData -> Product 변환
   List<Product> loadAllProducts() {
     final List<Map<String, dynamic>> rawGoods = ExampleData.goods;
     final List<Product> products = [];
 
     const String unifiedManufacturer = 'XYZ';
 
+    // ✅ gname 기준 중복 제거
+    final Set<String> seenNames = {};
+
     for (final rawProduct in rawGoods) {
+      final String gname = rawProduct['gname'] as String;
+
+      // 이미 같은 이름이 들어갔으면 스킵 (사이즈/색상 다른 행 제거)
+      if (seenNames.contains(gname)) continue;
+      seenNames.add(gname);
+
       products.add(
         Product(
-          gname: rawProduct['gname'] as String,
+          gname: gname,
           gengname: rawProduct['gengname'] as String,
           gcategory: rawProduct['gcategory'] as String,
+
+          // 대표로 1개만 보여줄 거라 첫 행의 값만 사용됨
           gsize: rawProduct['gsize'] as String,
           gcolor: rawProduct['gcolor'] as String,
+
           mainimagePath: rawProduct['mainimagePath'] as String,
           gsumamount: rawProduct['gsumamount'] as int,
-
-          // ✅ 여기: 예시데이터에 price가 있으면 그걸 사용
           price: (rawProduct['price'] as num).toInt(),
-
           manufacturer: rawProduct['manufacturer'] as String? ?? unifiedManufacturer,
         ),
       );
@@ -67,9 +73,7 @@ class Product {
     return products;
   }
 
-// ------------------------------
 // Page
-// ------------------------------
 class GCategory extends StatefulWidget {
   final String userid;
   const GCategory({super.key, required this.userid});
@@ -107,16 +111,13 @@ class _GCategoryState extends State<GCategory> {
     _filterProducts(shouldSetState: false);
   }
 
-  // ------------------------------
   // Asset -> Bytes
-  // ------------------------------
   Future<Uint8List?> _loadAssetToBytes(String assetPath) async {
     try {
       final ByteData data = await rootBundle.load(assetPath);
       return data.buffer.asUint8List();
     } catch (e) {
-      // 기능 변화 없음(기존 print 유지)
-      // ignore: avoid_print
+
       print("❌ [Image Load Error] Asset 로드 실패: $assetPath, Error: $e");
       return null;
     }
@@ -143,9 +144,7 @@ class _GCategoryState extends State<GCategory> {
     );
   }
 
-  // ------------------------------
-  // 필터링 로직 (그대로)
-  // ------------------------------
+  // 필터링
   void _filterProducts({bool shouldSetState = true}) {
     List<Product> results = _allProducts;
 
@@ -180,9 +179,6 @@ class _GCategoryState extends State<GCategory> {
     }
   }
 
-  // ------------------------------
-  // UI: 필터 태그
-  // ------------------------------
   Widget _buildFilterTag(String text, Color color) {
     if (text == '모두') return const SizedBox.shrink();
 
@@ -229,9 +225,7 @@ class _GCategoryState extends State<GCategory> {
     );
   }
 
-  // ------------------------------
   // Build
-  // ------------------------------
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -304,9 +298,7 @@ class _GCategoryState extends State<GCategory> {
     );
   }
 
-  // ------------------------------
-  // 상품 카드 (디자인 유지)
-  // ------------------------------
+  // 상품 카드
   Widget _buildProductCard(Product product) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -368,9 +360,7 @@ class _GCategoryState extends State<GCategory> {
     );
   }
 
-  // ------------------------------
   // BottomSheet
-  // ------------------------------
   void _showFilterBottomSheet(BuildContext context) {
     _tempSelectedCategory = _selectedCategory;
     _tempSelectedManufacturer = _selectedManufacturer;
@@ -467,9 +457,7 @@ class _GCategoryState extends State<GCategory> {
     );
   }
 
-  // ------------------------------
   // Chips
-  // ------------------------------
   Widget _buildCategoryChips(StateSetter setStateModal) {
     final List<String> categories = ['러닝화', '농구화', '운동화', '스니커즈', '모두'];
 
