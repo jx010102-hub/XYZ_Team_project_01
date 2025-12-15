@@ -113,34 +113,44 @@ class _AdminAddState extends State<AdminAdd> {
       unit: _selectedUnit,
     );
 
-    final newGoods = Goods(
-      gseq: null,
-      gsumamount: 50,
-      gname: gname,
-      gengname: gengname,
-      gsize: sizes.join(', '),
-      gcolor: '기본',
-      gcategory: '기타',
-      manufacturer: manufacturer,
-      price: price,
-      mainimage: _mainImageBytes,
-      topimage: _topImageBytes,
-      backimage: _backImageBytes,
-      sideimage: _sideImageBytes,
-    );
-
     setState(() => _isSaving = true);
 
     try {
-      final result = await GoodsDatabase().insertGoods(newGoods);
+      final db = GoodsDatabase();
+      int successCount = 0;
+
+      for (final s in sizes) {
+        final goodsRow = Goods(
+          gseq: null,
+          gsumamount: 50,
+          gname: gname,
+          gengname: gengname,
+
+          // ✅ 여기 핵심: "250" 같은 단일 사이즈로 저장
+          gsize: s.toString(),
+
+          gcolor: '기본',      // 색상도 나중에 옵션이면 여기도 루프/선택값으로 확장
+          gcategory: '기타',
+          manufacturer: manufacturer,
+          price: price,
+
+          mainimage: _mainImageBytes,
+          topimage: _topImageBytes,
+          backimage: _backImageBytes,
+          sideimage: _sideImageBytes,
+        );
+
+        final r = await db.insertGoods(goodsRow);
+        if (r > 0) successCount++;
+      }
 
       if (!mounted) return;
 
-      if (result > 0) {
-        msg.success('완료', '상품 등록 완료');
+      if (successCount == sizes.length) {
+        msg.success('완료', '상품 등록 완료 (사이즈 ${sizes.length}개 생성됨)');
         Navigator.pop(context);
       } else {
-        msg.warning('실패', '등록 실패');
+        msg.warning('부분 실패', '일부 사이즈만 등록됨 ($successCount / ${sizes.length})');
       }
     } catch (e) {
       msg.error('DB 오류', '저장 중 오류 발생: $e');
