@@ -5,6 +5,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 
 import 'package:xyz_project_01/model/goods.dart';
 import 'package:xyz_project_01/repository/goods_repository.dart';
@@ -21,7 +22,7 @@ class GMain extends StatefulWidget {
 class _GMainState extends State<GMain> with AutomaticKeepAliveClientMixin {
   final PageController _pageController = PageController(viewportFraction: 0.85);
   int _currentPage = 0;
-
+  final formatter = NumberFormat('#,###');
   // 대표 상품 리스트
   List<Goods> recommendedGoods = []; // 오늘의 추천 (슬라이더)
   List<Goods> popularGoods = []; // 인기 상품 (가로 스크롤)
@@ -267,8 +268,8 @@ class _GMainState extends State<GMain> with AutomaticKeepAliveClientMixin {
                     overflow: TextOverflow.ellipsis,
                   ),
                   const Padding(padding: EdgeInsets.only(top: 5)),
-                  const Text(
-                    "150,000원",
+                  Text(
+                    '${formatter.format(goods.price)}원',
                     style: TextStyle(
                       fontSize: 16,
                       color: Colors.blueAccent,
@@ -353,8 +354,8 @@ class _GMainState extends State<GMain> with AutomaticKeepAliveClientMixin {
                 overflow: TextOverflow.ellipsis,
               ),
               const Padding(padding: EdgeInsets.only(top: 5)),
-              const Text(
-                "150,000원",
+              Text(
+                '${formatter.format(goods.price)}원',
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w600,

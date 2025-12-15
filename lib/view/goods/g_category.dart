@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle, ByteData;
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 
 import 'package:xyz_project_01/model/goods.dart';
 import 'package:xyz_project_01/view/insert/goods_detail_page.dart';
@@ -38,31 +39,33 @@ class Product {
 // ------------------------------
 // ExampleData -> Product 변환 (기존 유지)
 // ------------------------------
-List<Product> loadAllProducts() {
-  final List<Map<String, dynamic>> rawGoods = ExampleData.goods;
-  final List<Product> products = [];
+  List<Product> loadAllProducts() {
+    final List<Map<String, dynamic>> rawGoods = ExampleData.goods;
+    final List<Product> products = [];
 
-  const int unifiedPrice = 150000;
-  const String unifiedManufacturer = 'XYZ';
+    const String unifiedManufacturer = 'XYZ';
 
-  for (final rawProduct in rawGoods) {
-    products.add(
-      Product(
-        gname: rawProduct['gname'] as String,
-        gengname: rawProduct['gengname'] as String,
-        gcategory: rawProduct['gcategory'] as String,
-        gsize: rawProduct['gsize'] as String,
-        gcolor: rawProduct['gcolor'] as String,
-        mainimagePath: rawProduct['mainimagePath'] as String,
-        gsumamount: rawProduct['gsumamount'] as int,
-        price: unifiedPrice,
-        manufacturer: unifiedManufacturer,
-      ),
-    );
+    for (final rawProduct in rawGoods) {
+      products.add(
+        Product(
+          gname: rawProduct['gname'] as String,
+          gengname: rawProduct['gengname'] as String,
+          gcategory: rawProduct['gcategory'] as String,
+          gsize: rawProduct['gsize'] as String,
+          gcolor: rawProduct['gcolor'] as String,
+          mainimagePath: rawProduct['mainimagePath'] as String,
+          gsumamount: rawProduct['gsumamount'] as int,
+
+          // ✅ 여기: 예시데이터에 price가 있으면 그걸 사용
+          price: (rawProduct['price'] as num).toInt(),
+
+          manufacturer: rawProduct['manufacturer'] as String? ?? unifiedManufacturer,
+        ),
+      );
+    }
+
+    return products;
   }
-
-  return products;
-}
 
 // ------------------------------
 // Page
@@ -70,7 +73,7 @@ List<Product> loadAllProducts() {
 class GCategory extends StatefulWidget {
   final String userid;
   const GCategory({super.key, required this.userid});
-
+  
   @override
   State<GCategory> createState() => _GCategoryState();
 }
@@ -78,6 +81,8 @@ class GCategory extends StatefulWidget {
 class _GCategoryState extends State<GCategory> {
   late final List<Product> _allProducts;
   late List<Product> _filteredProducts;
+  final NumberFormat _currencyFormatter = NumberFormat('#,###');
+  String _formatCurrency(int amount) => '${_currencyFormatter.format(amount)}원';
 
   // 필터 상태 초기값
   String _selectedCategory = '러닝화';
@@ -348,9 +353,9 @@ class _GCategoryState extends State<GCategory> {
                 overflow: TextOverflow.ellipsis,
               ),
               const Padding(padding: EdgeInsets.only(top: 5)),
-              const Text(
-                "150,000원",
-                style: TextStyle(
+              Text(
+                _formatCurrency(product.price),
+                style: const TextStyle(
                   fontSize: 16,
                   color: Colors.blueAccent,
                   fontWeight: FontWeight.w600,

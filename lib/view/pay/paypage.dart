@@ -41,7 +41,6 @@ class _PayPageState extends State<PayPage> {
   final StoreController storeController = Get.find<StoreController>();
   final Message message = Message();
 
-  static const int _singlePrice = 150000; // 임시 단가
   static const int _fee = 0;
 
   final NumberFormat _currencyFormatter = NumberFormat('#,###');
@@ -58,7 +57,10 @@ class _PayPageState extends State<PayPage> {
 
   @override
   Widget build(BuildContext context) {
-    final int subtotal = _singlePrice * widget.quantity;
+    final int unitPrice = widget.goods.price > 0
+      ? widget.goods.price.toInt()
+      : 0;
+    final int subtotal = unitPrice * widget.quantity;
     final int totalAmount = subtotal + _fee;
 
     return Scaffold(

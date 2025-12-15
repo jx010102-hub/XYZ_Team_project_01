@@ -251,30 +251,35 @@ class ExampleData {
         'gname': '에어맥스',
         'gengname': 'Air Max',
         'gcategory': '러닝화',
+        'price': 150000,
         'main': 'main1.png', 'top': 'top1.png', 'back': 'back1.png', 'side': 'side1.png'
       },
       {
         'gname': '에어포스',
         'gengname': 'Air Force',
         'gcategory': '농구화',
+        'price': 200000,
         'main': 'main2.png', 'top': 'top2.png', 'back': 'back2.png', 'side': 'side2.png'
       },
       {
         'gname': '파워레인저',
         'gengname': 'Power Rangers',
         'gcategory': '운동화',
+        'price': 200000,
         'main': 'main3.png', 'top': 'top3.png', 'back': 'back3.png', 'side': 'side3.png'
       },
       {
         'gname': '가젤',
         'gengname': 'Gazelle',
         'gcategory': '스니커즈',
+        'price': 250000,
         'main': 'main4.png', 'top': 'top4.png', 'back': 'back4.png', 'side': 'side4.png'
       },
       {
         'gname': '슈퍼스타',
         'gengname': 'Superstar',
         'gcategory': '스니커즈',
+        'price': 350000,
         'main': 'main5.png', 'top': 'top5.png', 'back': 'back5.png', 'side': 'side5.png'
       },
     ];
@@ -290,6 +295,7 @@ class ExampleData {
             'gengname': product['gengname'],
             'gsize': size,
             'gcolor': color,
+            'price': product['price'],
             'gcategory': product['gcategory'],
             'mainimagePath': '$imagePathBase${product['main']}',
             'topimagePath': '$imagePathBase${product['top']}',
